@@ -57,6 +57,31 @@ export {
   SnackBar,
   Tooltip,
 } from "./lumina-ui/widgets/feedback.js";
+export {
+  Dropdown,
+  Form,
+  FormField,
+  Radio,
+  RadioGroup,
+  Slider,
+  TextArea,
+} from "./lumina-ui/widgets/forms.js";
+export {
+  AppBar,
+  BottomNavigationBar,
+  Drawer,
+  NavigationRail,
+  Scaffold,
+  TabBar,
+  TabBarView,
+} from "./lumina-ui/widgets/navigation.js";
+export {
+  AnimatedContainer,
+  AnimatedOpacity,
+  AnimatedScale,
+  AnimatedSlide,
+  AnimatedSwitcher,
+} from "./lumina-ui/widgets/animation.js";
 export { Text, Heading, Caption } from "./lumina-ui/widgets/text.js";
 
 export { App } from "./lumina-ui/app/App.js";

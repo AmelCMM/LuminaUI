@@ -239,7 +239,7 @@ function updateProps(dom, oldProps = {}, newProps = {}) {
       const event = key.slice(2).toLowerCase();
       dom.removeEventListener(event, oldVal);
     }
-    if (!(key in newProps)) {
+    if (!(key in newProps) || newProps[key] === undefined || newProps[key] === null) {
       // cleanup reflecting props and attributes
       if (
         key === "value" ||
@@ -263,6 +263,7 @@ function updateProps(dom, oldProps = {}, newProps = {}) {
     const value = newProps[key];
     const oldValue = oldProps[key];
 
+    if (value === undefined || value === null) return;
     if (value === oldValue) return;
 
     if (key === "style" && typeof value === "object") {

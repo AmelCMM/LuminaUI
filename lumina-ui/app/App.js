@@ -29,7 +29,19 @@ import {
   SnackBar,
   Tooltip,
 } from "../widgets/feedback.js";
-import { GridView, ListView, SingleChildScrollView } from "../widgets/scrolling.js";
+import {
+  AppBar,
+  BottomNavigationBar,
+  Drawer,
+  Scaffold,
+  TabBar,
+  TabBarView,
+} from "../widgets/navigation.js";
+import {
+  GridView,
+  ListView,
+  SingleChildScrollView,
+} from "../widgets/scrolling.js";
 import { Caption, Heading, Text } from "../widgets/text.js";
 import { createState } from "../core/state.js";
 
@@ -40,6 +52,9 @@ const [getTodos, setTodos, subscribeTodos] = createState([]);
 const [getInput, setInput, subscribeInput] = createState("");
 const [getDialogOpen, setDialogOpen, subscribeDialogOpen] = createState(false);
 const [getSnackOpen, setSnackOpen, subscribeSnackOpen] = createState(false);
+const [getActiveTab, setActiveTab, subscribeActiveTab] = createState("overview");
+const [getNavPage, setNavPage, subscribeNavPage] = createState("home");
+const [getDrawerOpen, setDrawerOpen, subscribeDrawerOpen] = createState(false);
 
 const subscribedUpdates = new WeakSet();
 
@@ -56,6 +71,9 @@ function bindState(forceUpdate) {
     subscribeInput,
     subscribeDialogOpen,
     subscribeSnackOpen,
+    subscribeActiveTab,
+    subscribeNavPage,
+    subscribeDrawerOpen,
   ].forEach((subscribe) => subscribe(forceUpdate));
 
   subscribedUpdates.add(forceUpdate);
@@ -461,9 +479,12 @@ function ScrollingGallery(theme) {
                     height: 82,
                     alignment: "center",
                     decoration: {
-                      color: [theme.primary, theme.accent, theme.warning, theme.chip][
-                        index
-                      ],
+                      color: [
+                        theme.primary,
+                        theme.accent,
+                        theme.warning,
+                        theme.chip,
+                      ][index],
                       borderRadius: 8,
                     },
                   },
@@ -527,6 +548,176 @@ function FeedbackGallery(theme) {
             ),
           ]),
         ]),
+      ]),
+    ],
+  );
+}
+
+function NavigationGallery(theme) {
+  const activeTab = getActiveTab();
+  const navPage = getNavPage();
+  const navCopy = {
+    home: "Home is selected. BottomNavigationBar is updating shared state.",
+    build: "Build is selected. This content changes when you click the bar.",
+    profile: "Profile is selected. The drawer uses the same navigation state.",
+  };
+  const tabs = [
+    {
+      label: "Overview",
+      value: "overview",
+      child: navigationPanel({
+        title: "Overview Tab",
+        body: "TabBar and TabBarView are connected. Click Details to swap this panel.",
+        theme,
+      }),
+    },
+    {
+      label: "Details",
+      value: "details",
+      child: navigationPanel({
+        title: "Details Tab",
+        body: "The tab content changed. The selected tab also receives active styling.",
+        theme,
+      }),
+    },
+  ];
+
+  return Card(
+    {
+      elevation: 1,
+      style: {
+        backgroundColor: theme.surface,
+        borderColor: theme.border,
+        width: "min(100%, 560px)",
+        padding: 0,
+        overflow: "hidden",
+      },
+    },
+    [
+      Scaffold({
+        appBar: AppBar({
+          title: "Navigation",
+          leading: Button({
+            text: "Menu",
+            variant: "text",
+            onClick: () => setDrawerOpen(true),
+            style: { color: theme.primary, padding: "4px 6px" },
+          }),
+          style: {
+            backgroundColor: theme.surface,
+            color: theme.text,
+            borderBottomColor: theme.border,
+          },
+          actions: [
+            Badge({ label: "2", color: theme.accent }, [
+              Icon({ name: "menu", color: theme.primary }),
+            ]),
+          ],
+        }),
+        body: Padding({ padding: 16 }, [
+          Column({ gap: 14 }, [
+            Container(
+              {
+                padding: 12,
+                decoration: {
+                  color: theme.subtle,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 8,
+                },
+              },
+              [
+                Column({ gap: 4 }, [
+                  Text(navPage.toUpperCase(), {
+                    color: theme.primary,
+                    weight: 800,
+                  }),
+                  Caption({ color: theme.muted }, navCopy[navPage]),
+                ]),
+              ],
+            ),
+            TabBar({
+              tabs,
+              value: activeTab,
+              onChange: setActiveTab,
+              color: theme.primary,
+              style: { borderBottomColor: theme.border },
+            }),
+            TabBarView({ tabs, value: activeTab }),
+          ]),
+        ]),
+        bottomNavigationBar: BottomNavigationBar({
+          value: navPage,
+          onChange: setNavPage,
+          color: theme.primary,
+          style: {
+            backgroundColor: theme.surface,
+            borderTopColor: theme.border,
+          },
+          items: [
+            { label: "Home", value: "home", icon: Icon("home") },
+            { label: "Build", value: "build", icon: Icon("settings") },
+            { label: "Profile", value: "profile", icon: Icon("person") },
+          ],
+        }),
+        drawer: Drawer(
+          {
+            open: getDrawerOpen(),
+            style: {
+              backgroundColor: theme.surface,
+              color: theme.text,
+              borderRight: `1px solid ${theme.border}`,
+            },
+          },
+          [
+            Padding({ padding: 16 }, [
+              Column({ gap: 14 }, [
+                Row({ mainAxisAlignment: "spaceBetween", gap: 10 }, [
+                  Heading(
+                    { level: 3, style: { color: theme.text } },
+                    "Drawer",
+                  ),
+                  Button({
+                    text: "Close",
+                    variant: "text",
+                    onClick: () => setDrawerOpen(false),
+                  }),
+                ]),
+                Divider({ color: theme.border }),
+                ...["home", "build", "profile"].map((page) =>
+                  Button({
+                    key: page,
+                    text: page[0].toUpperCase() + page.slice(1),
+                    variant: navPage === page ? "primary" : "text",
+                    onClick: () => {
+                      setNavPage(page);
+                      setDrawerOpen(false);
+                    },
+                    style: { textAlign: "left" },
+                  }),
+                ),
+              ]),
+            ]),
+          ],
+        ),
+      }),
+    ],
+  );
+}
+
+function navigationPanel({ title, body, theme }) {
+  return Container(
+    {
+      padding: 12,
+      decoration: {
+        color: theme.subtle,
+        border: `1px solid ${theme.border}`,
+        borderRadius: 8,
+      },
+    },
+    [
+      Column({ gap: 4 }, [
+        Text(title, { color: theme.text, weight: 800 }),
+        Caption({ color: theme.muted }, body),
       ]),
     ],
   );
@@ -661,10 +852,7 @@ export function App(forceUpdate) {
         Column({ gap: 20 }, [
           Row({ gap: 16, mainAxisAlignment: "spaceBetween" }, [
             Column({ gap: 4 }, [
-              Heading(
-                { level: 1, style: { color: theme.text } },
-                "LuminaUI",
-              ),
+              Heading({ level: 1, style: { color: theme.text } }, "LuminaUI"),
               Caption(
                 { color: theme.muted },
                 "Flutter-style widgets, built with vanilla JavaScript.",
@@ -699,6 +887,7 @@ export function App(forceUpdate) {
             AdvancedDisplayGallery(theme),
             ScrollingGallery(theme),
             FeedbackGallery(theme),
+            NavigationGallery(theme),
           ]),
           ...AppOverlays(theme),
         ]),

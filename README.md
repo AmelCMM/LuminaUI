@@ -91,6 +91,9 @@ lumina-ui/
 │   ├── display.js      # Icon, Image, avatars, badges
 │   ├── scrolling.js    # ScrollView, ListView, GridView
 │   ├── feedback.js     # Dialogs, snackbars, progress
+│   ├── forms.js        # Form, fields, radio, slider, dropdown
+│   ├── navigation.js   # Scaffold, app bars, tabs, navigation bars
+│   ├── animation.js    # Animated transition wrappers
 │   ├── text.js         # Text rendering
 │   └── utils.js        # Shared widget helpers
 │
@@ -120,6 +123,15 @@ lumina-ui/
 
 **Feedback:** `Dialog`, `AlertDialog`, `ModalBarrier`, `SnackBar`, `Tooltip`,
 `LinearProgressIndicator`, `CircularProgressIndicator`
+
+**Forms:** `Form`, `FormField`, `Radio`, `RadioGroup`, `Slider`, `Dropdown`,
+`TextArea`
+
+**Navigation:** `Scaffold`, `AppBar`, `TabBar`, `TabBarView`,
+`BottomNavigationBar`, `NavigationRail`, `Drawer`
+
+**Animation:** `AnimatedContainer`, `AnimatedOpacity`, `AnimatedScale`,
+`AnimatedSlide`, `AnimatedSwitcher`
 
 The API supports both compact children-first calls like `Column([Text("Hi")])`
 and configured calls like `Column({ gap: 8 }, [Text("Hi")])`.
@@ -172,9 +184,10 @@ These are the next things to fix.
       `Placeholder`, `ClipRRect`
 - [x] Scrolling widgets: `ListView`, `GridView`, `SingleChildScrollView`
 - [x] Feedback widgets: dialog, snackbar, tooltip, progress indicators
-- [ ] Form widgets: `Radio`, `Slider`, `Dropdown`, `Form`
-- [ ] Navigation widgets: tabs, drawer, route shell
-- [ ] Animation widgets: animated container, opacity, cross-fade
+- [x] Form widgets: `Radio`, `RadioGroup`, `Slider`, `Dropdown`, `Form`,
+      `FormField`, `TextArea`
+- [x] Navigation widgets: scaffold, app bar, tabs, drawer, navigation bars
+- [x] Animation widgets: animated container, opacity, scale, slide, switcher
 - [ ] Smarter rendering (diffing)
 - [ ] Component isolation
 - [ ] Theming system
