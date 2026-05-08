@@ -52,6 +52,7 @@ export function Button({
 export function Input({
   value,
   onChange,
+  onInput,
   placeholder = "",
   type = "text",
   id,
@@ -68,15 +69,29 @@ export function Input({
       type,
       ...(isCheckbox ? { checked: !!value } : { value: value ?? "" }),
       placeholder: placeholder || undefined,
-      onChange: (e) => {
-        if (!onChange) return;
-        if (isCheckbox) onChange(e.target.checked);
-        else onChange(e.target.value);
-      },
+      ...(isCheckbox
+        ? {
+            onChange: (e) => {
+              if (onChange) onChange(e.target.checked);
+            },
+          }
+        : {
+            onInput: (e) => {
+              if (onInput) onInput(e);
+              if (onChange) onChange(e.target.value);
+            },
+            onChange: (e) => {
+              if (onChange) onChange(e.target.value);
+            },
+          }),
       onFocus: (e) => {
+        if (props.onFocus) props.onFocus(e);
+        if (e.defaultPrevented) return;
         e.target.style.borderColor = "#6200ee";
       },
       onBlur: (e) => {
+        if (props.onBlur) props.onBlur(e);
+        if (e.defaultPrevented) return;
         e.target.style.borderColor = "#ddd";
       },
       style: {
@@ -88,10 +103,18 @@ export function Input({
         transition: "border-color 0.2s",
         ...style,
       },
-      ...props,
+      ...Object.fromEntries(
+        Object.entries(props).filter(
+          ([key]) => key !== "onFocus" && key !== "onBlur",
+        ),
+      ),
     },
     children: [],
   };
+}
+
+export function TextField(props) {
+  return Input({ ...props, type: props.type || "text" });
 }
 
 export function Checkbox({

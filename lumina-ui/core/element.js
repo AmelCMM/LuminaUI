@@ -39,13 +39,17 @@ export function createElement(tag, props = {}) {
       } catch (e) {
         element.setAttribute(key, String(value));
       }
+    } else if (key === "htmlFor") {
+      element.setAttribute("for", String(value));
     } else if (
       key === "id" ||
       key === "type" ||
       key === "name" ||
       key === "placeholder" ||
+      key === "title" ||
       key === "role" ||
       key === "aria-label" ||
+      key === "aria-checked" ||
       key.startsWith("aria-")
     ) {
       element.setAttribute(key, String(value));

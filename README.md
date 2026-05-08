@@ -30,6 +30,17 @@ Column([
 ])
 ```
 
+Widgets also accept a Flutter-like `props, children` form when you need
+configuration:
+
+```js
+Column({ gap: 12, mainAxisAlignment: "center" }, [
+  Padding({ padding: 16 }, [
+    Text("Hello World")
+  ])
+])
+```
+
 That's it. No JSX, no templates, no special syntax.
 
 ---
@@ -92,11 +103,16 @@ lumina-ui/
 
 ## 🧩 Available Widgets
 
-**Layout:** `Column(children)`, `Row(children)`
+**Layout:** `Column`, `Row`, `Container`, `Center`, `Align`, `Padding`,
+`SizedBox`, `Flexible`, `Expanded`, `Spacer`, `Wrap`, `Stack`, `Positioned`,
+`Divider`, `Card`
 
-**Basic:** `Text(value)`, `Button({ text, onClick })`
+**Text:** `Text`, `Heading`, `Caption`
 
-More widgets — `Padding`, `Expanded`, `Stack` — are in progress.
+**Controls:** `Button`, `Input`, `TextField`, `Checkbox`, `Switch`
+
+The API supports both compact children-first calls like `Column([Text("Hi")])`
+and configured calls like `Column({ gap: 8 }, [Text("Hi")])`.
 
 ---
 
@@ -139,7 +155,15 @@ These are the next things to fix.
 
 ## 🧭 Roadmap
 
-- [ ] `Padding`, `Expanded`, `Center` widgets
+- [x] `Padding`, `Expanded`, `Center` widgets
+- [x] First layout bricks: `Align`, `SizedBox`, `Flexible`, `Spacer`, `Wrap`,
+      `Stack`, `Positioned`, `Divider`, `Card`
+- [ ] Display widgets: `Icon`, `Image`, `CircleAvatar`, `Placeholder`
+- [ ] Form widgets: `TextField`, `Radio`, `Slider`, `Dropdown`, `Form`
+- [ ] Scrolling widgets: `ListView`, `GridView`, `SingleChildScrollView`
+- [ ] Navigation widgets: tabs, drawer, route shell
+- [ ] Feedback widgets: dialog, snackbar, tooltip, progress indicators
+- [ ] Animation widgets: animated container, opacity, cross-fade
 - [ ] Smarter rendering (diffing)
 - [ ] Component isolation
 - [ ] Theming system

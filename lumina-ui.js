@@ -16,12 +16,22 @@ export {
   Row,
   Container,
   Center,
+  Align,
   Expanded,
+  Flexible,
   Padding,
+  SizedBox,
+  Spacer,
+  Wrap,
+  Stack,
+  Positioned,
+  Divider,
+  Card,
 } from "./lumina-ui/widgets/layout.js";
 export {
   Button,
   Input,
+  TextField,
   Checkbox,
   Switch,
 } from "./lumina-ui/widgets/controls.js";

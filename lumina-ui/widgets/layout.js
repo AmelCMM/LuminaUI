@@ -1,141 +1,353 @@
-function filterLayoutProps(props = {}, allowed = []) {
-  const out = {};
-  allowed.forEach((k) => {
-    if (props[k] !== undefined) out[k] = props[k];
+import {
+  alignmentStyle,
+  cleanStyle,
+  decorationStyle,
+  edgeInsets,
+  flexCrossAlignment,
+  flexMainAlignment,
+  normalizeWidgetArgs,
+  px,
+} from "./utils.js";
+
+function layoutProps(props, omitted = []) {
+  const omittedSet = new Set([
+    "align",
+    "alignment",
+    "crossAxisAlignment",
+    "mainAxisAlignment",
+    "justifyContent",
+    "gap",
+    "padding",
+    "margin",
+    "width",
+    "height",
+    "minWidth",
+    "minHeight",
+    "maxWidth",
+    "maxHeight",
+    "color",
+    "decoration",
+    "child",
+    "children",
+    "style",
+    "key",
+    ...omitted,
+  ]);
+
+  return Object.fromEntries(
+    Object.entries(props).filter(([key]) => !omittedSet.has(key)),
+  );
+}
+
+function flexLayout(direction, fallbackCross, propsOrChildren, maybeChildren) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const {
+    gap = 0,
+    padding = 0,
+    mainAxisAlignment,
+    crossAxisAlignment,
+    justifyContent,
+    align,
+    alignment,
+    style = {},
+  } = props;
+
+  const finalStyle = cleanStyle({
+    display: "flex",
+    flexDirection: direction,
+    gap: px(gap),
+    padding: edgeInsets(padding),
+    alignItems: flexCrossAlignment(
+      crossAxisAlignment ?? align ?? alignment,
+      fallbackCross,
+    ),
+    justifyContent: flexMainAlignment(
+      mainAxisAlignment ?? justifyContent,
+      "flex-start",
+    ),
+    ...style,
   });
-  return out;
-}
 
-export function Column(props = {}, children = []) {
-  const childrenArray = Array.isArray(children) ? children : [children];
-  const gap = props.gap ?? 0;
-  const padding = props.padding ?? 0;
-
-  const style = {
-    display: "flex",
-    flexDirection: "column",
-    gap: typeof gap === "number" ? `${gap}px` : gap,
-    padding: typeof padding === "number" ? `${padding}px` : padding,
-    alignItems: props.align || props.alignment || "stretch",
-    justifyContent: props.justifyContent || "flex-start",
-    ...props.style,
+  return {
+    tag: "div",
+    props: { ...layoutProps(props), style: finalStyle },
+    children,
+    key: props.key,
   };
-
-  const safe = filterLayoutProps(props, [
-    "id",
-    "style",
-    "className",
-    "role",
-    "aria-label",
-  ]);
-
-  return { tag: "div", props: { style, ...safe }, children: childrenArray };
 }
 
-export function Row(props = {}, children = []) {
-  const childrenArray = Array.isArray(children) ? children : [children];
-  const gap = props.gap ?? 0;
-  const padding = props.padding ?? 0;
+export function Column(propsOrChildren = {}, maybeChildren = undefined) {
+  return flexLayout("column", "stretch", propsOrChildren, maybeChildren);
+}
 
-  const style = {
-    display: "flex",
-    flexDirection: "row",
-    gap: typeof gap === "number" ? `${gap}px` : gap,
-    padding: typeof padding === "number" ? `${padding}px` : padding,
-    alignItems: props.align || props.alignment || "center",
-    justifyContent: props.justifyContent || "flex-start",
-    ...props.style,
+export function Row(propsOrChildren = {}, maybeChildren = undefined) {
+  return flexLayout("row", "center", propsOrChildren, maybeChildren);
+}
+
+export function Container(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const {
+    width,
+    height,
+    minWidth,
+    minHeight,
+    maxWidth,
+    maxHeight,
+    color,
+    padding,
+    margin,
+    alignment,
+    decoration,
+    style = {},
+  } = props;
+
+  const alignmentStyles = alignment
+    ? { display: "flex", ...alignmentStyle(alignment) }
+    : {};
+
+  const finalStyle = cleanStyle({
+    width: px(width),
+    height: px(height),
+    minWidth: px(minWidth),
+    minHeight: px(minHeight),
+    maxWidth: px(maxWidth),
+    maxHeight: px(maxHeight),
+    backgroundColor: color,
+    padding: edgeInsets(padding),
+    margin: edgeInsets(margin),
+    ...decorationStyle(decoration),
+    ...alignmentStyles,
+    ...style,
+  });
+
+  return {
+    tag: "div",
+    props: { ...layoutProps(props), style: finalStyle },
+    children,
+    key: props.key,
   };
-
-  const safe = filterLayoutProps(props, [
-    "id",
-    "style",
-    "className",
-    "role",
-    "aria-label",
-  ]);
-
-  return { tag: "div", props: { style, ...safe }, children: childrenArray };
 }
 
-export function Container(props = {}, children = []) {
-  const childrenArray = Array.isArray(children) ? children : [children];
-  const style = { ...(props.style || {}) };
-
-  if (props.width)
-    style.width =
-      typeof props.width === "number" ? `${props.width}px` : props.width;
-  if (props.height)
-    style.height =
-      typeof props.height === "number" ? `${props.height}px` : props.height;
-  if (props.color) style.backgroundColor = props.color;
-  if (props.padding)
-    style.padding =
-      typeof props.padding === "number" ? `${props.padding}px` : props.padding;
-  if (props.margin)
-    style.margin =
-      typeof props.margin === "number" ? `${props.margin}px` : props.margin;
-
-  const safe = {
-    ...filterLayoutProps(props, [
-      "id",
-      "style",
-      "className",
-      "role",
-      "aria-label",
-    ]),
-    style,
-  };
-
-  return { tag: "div", props: safe, children: childrenArray };
-}
-
-export function Center(props = {}, children = []) {
-  const childrenArray = Array.isArray(children) ? children : [children];
-  const style = {
+export function Center(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const finalStyle = cleanStyle({
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    width: "100%",
-    height: "100%",
-    ...(props.style || {}),
+    width: props.width === undefined ? "100%" : px(props.width),
+    height: props.height === undefined ? "100%" : px(props.height),
+    ...props.style,
+  });
+
+  return {
+    tag: "div",
+    props: { ...layoutProps(props), style: finalStyle },
+    children,
+    key: props.key,
   };
-  const safe = filterLayoutProps(props, [
-    "id",
-    "style",
-    "className",
-    "role",
-    "aria-label",
-  ]);
-  return { tag: "div", props: { style, ...safe }, children: childrenArray };
 }
 
-export function Expanded(props = {}, children = []) {
-  const childrenArray = Array.isArray(children) ? children : [children];
-  const style = { flex: props.flex ?? 1, ...(props.style || {}) };
-  const safe = filterLayoutProps(props, [
-    "id",
-    "style",
-    "className",
-    "role",
-    "aria-label",
-  ]);
-  return { tag: "div", props: { style, ...safe }, children: childrenArray };
+export function Align(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const finalStyle = cleanStyle({
+    display: "flex",
+    ...alignmentStyle(props.alignment || "center"),
+    width: props.widthFactor ? "fit-content" : px(props.width, "100%"),
+    height: props.heightFactor ? "fit-content" : px(props.height, "100%"),
+    ...props.style,
+  });
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props, ["widthFactor", "heightFactor"]),
+      style: finalStyle,
+    },
+    children,
+    key: props.key,
+  };
 }
 
-export function Padding(props = {}, children = []) {
-  const childrenArray = Array.isArray(children) ? children : [children];
-  const pad = props.padding ?? 0;
-  const style = {
-    padding: typeof pad === "number" ? `${pad}px` : pad,
-    ...(props.style || {}),
+export function Padding(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const finalStyle = cleanStyle({
+    padding: edgeInsets(props.padding ?? 0),
+    ...props.style,
+  });
+
+  return {
+    tag: "div",
+    props: { ...layoutProps(props), style: finalStyle },
+    children,
+    key: props.key,
   };
-  const safe = filterLayoutProps(props, [
-    "id",
-    "style",
-    "className",
-    "role",
-    "aria-label",
-  ]);
-  return { tag: "div", props: { style, ...safe }, children: childrenArray };
+}
+
+export function SizedBox(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const finalStyle = cleanStyle({
+    width: px(props.width),
+    height: px(props.height),
+    display: children.length ? undefined : "block",
+    flexShrink: 0,
+    ...props.style,
+  });
+
+  return {
+    tag: "div",
+    props: { ...layoutProps(props), style: finalStyle },
+    children,
+    key: props.key,
+  };
+}
+
+export function Flexible(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const flex = props.flex ?? 1;
+  const fit = props.fit || "loose";
+  const finalStyle = cleanStyle({
+    flex: `${flex} ${fit === "tight" ? 1 : 0} ${fit === "tight" ? "0%" : "auto"}`,
+    minWidth: 0,
+    minHeight: 0,
+    ...props.style,
+  });
+
+  return {
+    tag: "div",
+    props: { ...layoutProps(props, ["flex", "fit"]), style: finalStyle },
+    children,
+    key: props.key,
+  };
+}
+
+export function Expanded(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  return Flexible({ ...props, fit: "tight" }, children);
+}
+
+export function Spacer(props = {}) {
+  const flex = props.flex ?? 1;
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props, ["flex"]),
+      "aria-hidden": "true",
+      style: cleanStyle({ flex: `${flex} 1 0%`, ...props.style }),
+    },
+    children: [],
+    key: props.key,
+  };
+}
+
+export function Wrap(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const finalStyle = cleanStyle({
+    display: "flex",
+    flexWrap: "wrap",
+    flexDirection: props.direction === "vertical" ? "column" : "row",
+    gap: px(props.gap ?? props.spacing ?? 0),
+    alignItems: flexCrossAlignment(props.crossAxisAlignment, "flex-start"),
+    justifyContent: flexMainAlignment(props.alignment, "flex-start"),
+    ...props.style,
+  });
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props, ["direction", "spacing"]),
+      style: finalStyle,
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function Stack(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const finalStyle = cleanStyle({
+    position: "relative",
+    width: px(props.width, "100%"),
+    height: px(props.height, "auto"),
+    overflow: props.clip === false ? "visible" : "hidden",
+    ...props.style,
+  });
+
+  return {
+    tag: "div",
+    props: { ...layoutProps(props, ["clip"]), style: finalStyle },
+    children,
+    key: props.key,
+  };
+}
+
+export function Positioned(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const finalStyle = cleanStyle({
+    position: "absolute",
+    top: px(props.top),
+    right: px(props.right),
+    bottom: px(props.bottom),
+    left: px(props.left),
+    width: px(props.width),
+    height: px(props.height),
+    ...props.style,
+  });
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props, ["top", "right", "bottom", "left"]),
+      style: finalStyle,
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function Divider(props = {}) {
+  const finalStyle = cleanStyle({
+    width: props.direction === "vertical" ? px(props.thickness ?? 1) : "100%",
+    height: props.direction === "vertical" ? "auto" : px(props.thickness ?? 1),
+    minHeight:
+      props.direction === "vertical" ? px(props.height, "100%") : undefined,
+    border: "none",
+    backgroundColor: props.color || "#e0e0e0",
+    margin: edgeInsets(
+      props.margin ?? (props.direction === "vertical" ? "0 8px" : "8px 0"),
+    ),
+    flexShrink: 0,
+    ...props.style,
+  });
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props, ["direction", "thickness"]),
+      role: props.role || "separator",
+      style: finalStyle,
+    },
+    children: [],
+    key: props.key,
+  };
+}
+
+export function Card(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  return Container(
+    {
+      ...props,
+      decoration: {
+        color: "#ffffff",
+        border: "1px solid #e5e7eb",
+        borderRadius: props.radius ?? 8,
+        boxShadow: props.elevation
+          ? `0 ${props.elevation}px ${props.elevation * 4}px rgba(15, 23, 42, 0.12)`
+          : "0 1px 2px rgba(15, 23, 42, 0.08)",
+        ...(props.decoration || {}),
+      },
+      padding: props.padding ?? 16,
+      style: props.style,
+    },
+    children,
+  );
 }

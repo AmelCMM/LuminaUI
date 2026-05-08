@@ -3,12 +3,9 @@ import { createElement } from "./element.js";
 // vnode shape: { tag, props, children, key }
 // function widgets: (forceUpdate) => vnode
 
-let currentUpdateId = 0;
-
 export function mount(componentFn, container) {
   let currentTree = null;
   let mounted = true;
-  const updateId = currentUpdateId++;
 
   const forceUpdate = () => {
     if (!mounted) return;
@@ -16,7 +13,8 @@ export function mount(componentFn, container) {
   };
 
   function render() {
-    const newTree = renderWidget(componentFn, forceUpdate);
+    const newTree =
+      typeof componentFn === "function" ? componentFn(forceUpdate) : componentFn;
     if (!currentTree) {
       const dom = renderWidget(newTree, forceUpdate);
       container.innerHTML = "";
@@ -29,12 +27,12 @@ export function mount(componentFn, container) {
 
   render();
 
-  // return an unmountable forceUpdate
-  const teardown = () => {
-    mounted = false;
-  };
   const wrappedForce = () => {
     if (mounted) forceUpdate();
+  };
+  wrappedForce.unmount = () => {
+    mounted = false;
+    container.innerHTML = "";
   };
 
   return wrappedForce;
@@ -46,6 +44,7 @@ function renderWidget(widget, forceUpdate) {
     return document.createTextNode("");
   if (typeof widget === "string" || typeof widget === "number")
     return document.createTextNode(String(widget));
+  if (typeof Node !== "undefined" && widget instanceof Node) return widget;
 
   // arrays -> fragment
   if (Array.isArray(widget)) {
@@ -256,6 +255,10 @@ function updateProps(dom, oldProps = {}, newProps = {}) {
     if (value === oldValue) return;
 
     if (key === "style" && typeof value === "object") {
+      const previous = oldProps.style || {};
+      Object.keys(previous).forEach((styleKey) => {
+        if (!(styleKey in value)) dom.style[styleKey] = "";
+      });
       Object.assign(dom.style, value);
     } else if (key.startsWith("on") && typeof value === "function") {
       const event = key.slice(2).toLowerCase();
@@ -277,6 +280,8 @@ function updateProps(dom, oldProps = {}, newProps = {}) {
       }
     } else if (key === "tabIndex") {
       dom.tabIndex = value;
+    } else if (key === "htmlFor") {
+      dom.setAttribute("for", String(value));
     } else if (key !== "children" && value !== undefined && value !== null) {
       dom.setAttribute(key, String(value));
     }

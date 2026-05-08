@@ -35,10 +35,12 @@ export function Text(content = "", props = {}) {
 
   // Normalize content: preserve nodes if passed
   const children = [];
-  if (content instanceof Node) children.push(content);
+  const isNode = (value) => typeof Node !== "undefined" && value instanceof Node;
+
+  if (isNode(content)) children.push(content);
   else if (Array.isArray(content))
     content.forEach((c) =>
-      children.push(c instanceof Node ? c : String(c ?? "")),
+      children.push(isNode(c) ? c : String(c ?? "")),
     );
   else children.push(String(content ?? ""));
 
