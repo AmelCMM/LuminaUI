@@ -130,8 +130,6 @@ export {
   IgnorePointer,
 } from "./lumina-ui/widgets/interaction.js";
 
-export { App } from "./lumina-ui/app/App.js";
-
 /*
 export default {
   mount,

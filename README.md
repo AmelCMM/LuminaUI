@@ -7,7 +7,8 @@ The core idea is simple: build your UI as a tree of JavaScript widget
 functions. Each widget returns a small virtual node object, and LuminaUI turns
 that tree into real DOM.
 
-No JSX. No build step. No dependencies. Open `index.html` and it runs.
+No JSX. No build step. No runtime dependencies. Use it from npm, or open
+`index.html` and run the local demo directly.
 
 ```js
 Column({ gap: 12 }, [
@@ -29,14 +30,34 @@ LuminaUI gives you:
 - Real DOM output
 - A tiny reactive state primitive
 - Layout, forms, navigation, feedback, scrolling, display, and animation widgets
-- No npm install, bundler, compiler, or framework runtime
+- No required bundler, compiler, or framework runtime
+- A clean ESM package entry point for library usage
 
 LuminaUI is still experimental, but it is now large enough for developers to
 build small apps and understand how the framework is intended to grow.
 
 ## Quick Start
 
-Clone the project and open `index.html` in a browser.
+After publishing the package, install it in an app:
+
+```bash
+npm install @neuralumina/lumina-ui
+```
+
+```js
+import { mount, Column, Text, Button } from "@neuralumina/lumina-ui";
+
+function App() {
+  return Column({ gap: 12, padding: 16 }, [
+    Text("Hello from LuminaUI"),
+    Button({ text: "Click me", onClick: () => console.log("clicked") }),
+  ]);
+}
+
+mount(App, document.getElementById("root"));
+```
+
+Or clone this repository and open `index.html` in a browser.
 
 ```bash
 git clone https://github.com/<your-username>/lumina-ui.git
@@ -60,8 +81,8 @@ The demo app is mounted from `index.html`:
 ```html
 <div id="root"></div>
 <script type="module">
-  import { App } from "./lumina-ui.js";
-  import { mount } from "./lumina-ui/core/renderer.js";
+  import { mount } from "./lumina-ui.js";
+  import { App } from "./lumina-ui/app/App.js";
 
   const root = document.getElementById("root");
   mount(App, root);
@@ -74,10 +95,19 @@ The demo app is mounted from `index.html`:
 LuminaUI/
 ├── index.html
 ├── lumina-ui.js
+├── package.json
 ├── README.md
+├── scripts/
+│   └── smoke-test.mjs
 └── lumina-ui/
     ├── app/
-    │   └── App.js
+    │   ├── App.js
+    │   └── ecommerce/
+    │       ├── catalog.json
+    │       ├── components.js
+    │       ├── data.js
+    │       ├── EcommerceApp.js
+    │       └── store.js
     ├── core/
     │   ├── element.js
     │   ├── renderer.js
@@ -99,12 +129,43 @@ LuminaUI/
 
 ### Important files
 
-- `lumina-ui.js`: public entry point that re-exports the framework API.
-- `lumina-ui/app/App.js`: demo application showing how widgets are used.
+- `package.json`: npm package metadata, ESM exports, publish file list, and scripts.
+- `lumina-ui.js`: public library entry point that re-exports the framework API.
+- `scripts/smoke-test.mjs`: minimal DOM smoke test for renderer and widget behavior.
+- `lumina-ui/app/App.js`: local demo application showing how widgets are used.
+- `lumina-ui/app/ecommerce/*`: advanced ecommerce demo app. It is intentionally
+  not exported from the package entry point.
 - `lumina-ui/core/renderer.js`: `mount()` and DOM patching.
 - `lumina-ui/core/state.js`: `createState`, `useEffect`, and `createStore`.
 - `lumina-ui/core/element.js`: low-level DOM element creation.
 - `lumina-ui/widgets/*`: widget modules grouped by purpose.
+
+## Package Scripts
+
+```bash
+npm run check
+npm test
+npm run pack:dry
+```
+
+- `npm run check` syntax-checks every JavaScript module in the repository.
+- `npm test` runs the syntax check and the DOM smoke test.
+- `npm run pack:dry` previews the npm tarball contents without publishing.
+
+The published package surface is framework-only: `lumina-ui.js`,
+`lumina-ui/core/*`, and `lumina-ui/widgets/*`. The ecommerce app remains a demo
+consumer inside the repository.
+
+## Publishing
+
+Before the first publish, make sure the `name` in `package.json` matches an npm
+scope you control. For the current scoped package name, publish publicly with:
+
+```bash
+npm test
+npm run pack:dry
+npm publish --access public
+```
 
 ## Core Mental Model
 
@@ -170,7 +231,29 @@ SizedBox({ width: 120, height: "50vh" })
 
 ## Importing
 
-You can import from the top-level entry point:
+When installed as a package, import from the top-level entry point:
+
+```js
+import {
+  mount,
+  useState,
+  Column,
+  Text,
+  Button,
+} from "@neuralumina/lumina-ui";
+```
+
+Package subpath imports are available for smaller, explicit imports:
+
+```js
+import { mount } from "@neuralumina/lumina-ui/core/renderer";
+import { createState } from "@neuralumina/lumina-ui/core/state";
+import { Column, Row } from "@neuralumina/lumina-ui/widgets/layout";
+import { Button } from "@neuralumina/lumina-ui/widgets/controls";
+import { Text } from "@neuralumina/lumina-ui/widgets/text";
+```
+
+When using this repository directly in the browser, import from local files:
 
 ```js
 import {
@@ -182,7 +265,7 @@ import {
 } from "./lumina-ui.js";
 ```
 
-Or import directly from modules:
+Local direct module imports work too:
 
 ```js
 import { mount } from "./lumina-ui/core/renderer.js";
