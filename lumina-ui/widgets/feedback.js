@@ -179,19 +179,26 @@ export function AlertDialog(props = {}) {
 export function SnackBar(propsOrChildren = {}, maybeChildren = undefined) {
   const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
   if (props.open === false) return null;
+  const onClick = (event) => {
+    event.stopPropagation();
+    if (props.onClick) props.onClick(event);
+  };
 
   return {
     tag: "div",
     props: {
-      ...omitProps(props, ["open", "message", "action", "position"]),
+      ...omitProps(props, ["open", "message", "action", "position", "zIndex"]),
       role: "status",
+      onClick,
       style: cleanStyle({
         position: "fixed",
         left: "50%",
         bottom: props.position === "top" ? undefined : "20px",
         top: props.position === "top" ? "20px" : undefined,
         transform: "translateX(-50%)",
-        zIndex: props.zIndex ?? 1100,
+        zIndex: props.zIndex ?? 3000,
+        pointerEvents: "auto",
+        isolation: "isolate",
         display: "flex",
         alignItems: "center",
         gap: "14px",

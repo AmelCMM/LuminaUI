@@ -1276,8 +1276,8 @@ export function ProductDialog() {
                   text: product.stock ? "Add to cart" : "Sold out",
                   disabled: product.stock <= 0,
                   onClick: () => {
-                    addToCart(product.id);
                     closeProduct();
+                    addToCart(product.id);
                     setCartOpen(true);
                   },
                   style: {

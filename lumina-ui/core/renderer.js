@@ -217,9 +217,12 @@ function patchWidget(parent, oldWidget, newWidget, index = 0, currentDom = null)
       continue;
     } else if (oldEmpty && !newEmpty) {
       const newDom = renderWidget(newC);
-      dom.insertBefore(newDom, dom.childNodes[i] || null);
+      if (dom.childNodes[i]) dom.replaceChild(newDom, dom.childNodes[i]);
+      else dom.insertBefore(newDom, dom.childNodes[i] || null);
     } else if (!oldEmpty && newEmpty) {
-      if (dom.childNodes[i]) dom.removeChild(dom.childNodes[i]);
+      const emptyDom = renderWidget(newC);
+      if (dom.childNodes[i]) dom.replaceChild(emptyDom, dom.childNodes[i]);
+      else dom.insertBefore(emptyDom, dom.childNodes[i] || null);
     } else {
       patchWidget(dom, oldC, newC, i);
     }
