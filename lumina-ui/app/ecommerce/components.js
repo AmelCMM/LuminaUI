@@ -516,11 +516,10 @@ function ProductCard(product) {
             }),
           ]),
           Positioned({
-            left: 10,
-            top: 10,
-            child: Badge({ label: product.badge, color: theme.primary }, [
-              SizedBox({ width: 1, height: 1 }),
-            ]),
+            left: 12,
+            top: 12,
+            right: 12,
+            child: ProductBadge(product.badge),
           }),
         ]),
         Padding({ padding: 14 }, [
@@ -575,6 +574,46 @@ function ProductCard(product) {
       ]),
     ],
   );
+}
+
+function ProductBadge(label, color = theme.primary) {
+  return {
+    tag: "span",
+    props: {
+      style: {
+        display: "inline-flex",
+        alignItems: "center",
+        maxWidth: "100%",
+        width: "fit-content",
+        minHeight: "28px",
+        padding: "5px 10px",
+        borderRadius: "999px",
+        border: "2px solid rgba(255,255,255,0.86)",
+        backgroundColor: color,
+        boxShadow: "0 8px 18px rgba(15, 23, 42, 0.16)",
+        overflow: "hidden",
+      },
+    },
+    children: [
+      {
+        tag: "span",
+        props: {
+          style: {
+            display: "block",
+            maxWidth: "100%",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            color: "#ffffff",
+            fontSize: "11px",
+            fontWeight: 900,
+            lineHeight: 1,
+          },
+        },
+        children: [label],
+      },
+    ],
+  };
 }
 
 export function CartDrawer() {

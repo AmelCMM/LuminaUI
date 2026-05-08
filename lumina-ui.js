@@ -10,6 +10,7 @@ export {
   applyStyles,
   addClasses,
 } from "./lumina-ui/core/element.js";
+export { luminaTheme } from "./lumina-ui/widgets/utils.js";
 
 export {
   Column,

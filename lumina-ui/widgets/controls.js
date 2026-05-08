@@ -1,3 +1,35 @@
+import {
+  applyFieldFocus,
+  clearFieldFocus,
+  ensureGlobalStyle,
+  fieldStyle,
+  luminaTheme,
+} from "./utils.js";
+
+function ensureControlStyles() {
+  ensureGlobalStyle(
+    "lumina-control-styles",
+    `
+.lumina-button:not(:disabled):hover {
+  filter: saturate(1.06);
+  transform: translateY(-1px);
+}
+.lumina-button:not(:disabled):active {
+  transform: translateY(0);
+}
+.lumina-button:focus-visible,
+.lumina-switch:focus-visible,
+.lumina-field:focus-visible {
+  outline: 2px solid ${luminaTheme.colors.focus};
+  outline-offset: 2px;
+}
+.lumina-field:hover:not(:disabled) {
+  border-color: ${luminaTheme.colors.primary} !important;
+}
+`,
+  );
+}
+
 function genId(prefix = "id") {
   if (typeof crypto !== "undefined" && crypto.randomUUID)
     return `${prefix}-${crypto.randomUUID()}`;
@@ -13,25 +45,51 @@ export function Button({
   style = {},
   ...props
 }) {
+  ensureControlStyles();
   const variants = {
-    primary: { backgroundColor: "#6200ee", color: "white", border: "none" },
-    secondary: {
-      backgroundColor: "transparent",
-      color: "#6200ee",
-      border: "1px solid #6200ee",
+    primary: {
+      backgroundColor: luminaTheme.colors.primary,
+      color: "white",
+      border: `1px solid ${luminaTheme.colors.primary}`,
+      boxShadow: "0 8px 18px rgba(37, 99, 235, 0.20)",
     },
-    text: { backgroundColor: "transparent", color: "#6200ee", border: "none" },
-    danger: { backgroundColor: "#dc3545", color: "white", border: "none" },
+    secondary: {
+      backgroundColor: luminaTheme.colors.surface,
+      color: luminaTheme.colors.primary,
+      border: `1px solid ${luminaTheme.colors.borderStrong}`,
+      boxShadow: luminaTheme.shadow.xs,
+    },
+    text: {
+      backgroundColor: "transparent",
+      color: luminaTheme.colors.primary,
+      border: "1px solid transparent",
+    },
+    danger: {
+      backgroundColor: luminaTheme.colors.danger,
+      color: "white",
+      border: `1px solid ${luminaTheme.colors.danger}`,
+      boxShadow: "0 8px 18px rgba(220, 38, 38, 0.18)",
+    },
   };
 
   const finalStyle = {
-    padding: "8px 16px",
-    borderRadius: "4px",
+    minHeight: "36px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    padding: "8px 14px",
+    borderRadius: luminaTheme.radius.md,
     cursor: disabled ? "not-allowed" : "pointer",
     fontSize: "14px",
-    fontWeight: "500",
-    transition: "all 0.2s",
+    fontWeight: 700,
+    fontFamily: "inherit",
+    lineHeight: 1,
+    whiteSpace: "nowrap",
+    userSelect: "none",
+    transition: `background-color ${luminaTheme.transition}, border-color ${luminaTheme.transition}, color ${luminaTheme.transition}, box-shadow ${luminaTheme.transition}, transform ${luminaTheme.transition}`,
     opacity: disabled ? 0.5 : 1,
+    outline: "none",
     ...variants[variant],
     ...style,
   };
@@ -44,6 +102,9 @@ export function Button({
       onClick,
       style: finalStyle,
       ...props,
+      className: ["lumina-button", `lumina-button-${variant}`, props.className]
+        .filter(Boolean)
+        .join(" "),
     },
     children: [text],
   };
@@ -59,8 +120,18 @@ export function Input({
   style = {},
   ...props
 }) {
+  ensureControlStyles();
   const isCheckbox = type === "checkbox";
   const finalId = id || genId("input");
+  const finalStyle = isCheckbox
+    ? {
+        width: "16px",
+        height: "16px",
+        accentColor: luminaTheme.colors.primary,
+        cursor: props.disabled ? "not-allowed" : "pointer",
+        ...style,
+      }
+    : fieldStyle(style);
 
   return {
     tag: "input",
@@ -87,27 +158,25 @@ export function Input({
       onFocus: (e) => {
         if (props.onFocus) props.onFocus(e);
         if (e.defaultPrevented) return;
-        e.target.style.borderColor = "#6200ee";
+        if (!isCheckbox) applyFieldFocus(e, style);
       },
       onBlur: (e) => {
         if (props.onBlur) props.onBlur(e);
         if (e.defaultPrevented) return;
-        e.target.style.borderColor = "#ddd";
+        if (!isCheckbox) clearFieldFocus(e, style);
       },
-      style: {
-        padding: "8px 12px",
-        borderRadius: "4px",
-        border: "1px solid #ddd",
-        fontSize: "14px",
-        outline: "none",
-        transition: "border-color 0.2s",
-        ...style,
-      },
+      style: finalStyle,
       ...Object.fromEntries(
         Object.entries(props).filter(
           ([key]) => key !== "onFocus" && key !== "onBlur",
         ),
       ),
+      className: [
+        isCheckbox ? "lumina-checkbox-input" : "lumina-field",
+        props.className,
+      ]
+        .filter(Boolean)
+        .join(" "),
     },
     children: [],
   };
@@ -125,6 +194,7 @@ export function Checkbox({
   style = {},
   ...props
 }) {
+  ensureControlStyles();
   const finalId = id || genId("checkbox");
 
   return {
@@ -132,10 +202,14 @@ export function Checkbox({
     props: {
       htmlFor: finalId,
       style: {
-        display: "flex",
+        display: "inline-flex",
         alignItems: "center",
         gap: "8px",
-        cursor: "pointer",
+        color: luminaTheme.colors.text,
+        fontSize: "14px",
+        lineHeight: 1.4,
+        cursor: props.disabled ? "not-allowed" : "pointer",
+        userSelect: "none",
         ...style,
       },
       ...props,
@@ -147,10 +221,16 @@ export function Checkbox({
           id: finalId,
           type: "checkbox",
           checked: !!checked,
+          disabled: props.disabled,
           onChange: (e) => {
             if (onChange) onChange(e.target.checked);
           },
-          style: { cursor: "pointer" },
+          style: {
+            width: "16px",
+            height: "16px",
+            accentColor: luminaTheme.colors.primary,
+            cursor: props.disabled ? "not-allowed" : "pointer",
+          },
         },
         children: [],
       },
@@ -166,16 +246,18 @@ export function Switch({
   style = {},
   ...props
 }) {
+  ensureControlStyles();
   const base = {
-    width: "48px",
+    width: "46px",
     height: "24px",
-    borderRadius: "12px",
-    backgroundColor: value ? "#6200ee" : "#ccc",
-    border: "none",
+    borderRadius: luminaTheme.radius.pill,
+    backgroundColor: value ? luminaTheme.colors.primary : luminaTheme.colors.track,
+    border: `1px solid ${value ? luminaTheme.colors.primary : luminaTheme.colors.borderStrong}`,
     cursor: "pointer",
     position: "relative",
-    transition: "background-color 0.2s",
+    transition: `background-color ${luminaTheme.transition}, border-color ${luminaTheme.transition}, box-shadow ${luminaTheme.transition}`,
     outline: "none",
+    boxShadow: value ? "0 8px 18px rgba(37, 99, 235, 0.16)" : "none",
     ...style,
   };
 
@@ -197,6 +279,7 @@ export function Switch({
       },
       style: base,
       ...props,
+      className: ["lumina-switch", props.className].filter(Boolean).join(" "),
     },
     children: [
       {
@@ -206,11 +289,12 @@ export function Switch({
             width: "20px",
             height: "20px",
             borderRadius: "10px",
-            backgroundColor: "white",
+            backgroundColor: luminaTheme.colors.surface,
             position: "absolute",
-            top: "2px",
-            left: value ? "26px" : "2px",
-            transition: "left 0.2s",
+            top: "1px",
+            left: value ? "22px" : "1px",
+            transition: `left ${luminaTheme.transition}, transform ${luminaTheme.transition}`,
+            boxShadow: "0 2px 6px rgba(15, 23, 42, 0.22)",
           },
         },
         children: [],

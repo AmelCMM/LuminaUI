@@ -2,6 +2,42 @@ export function isDomNode(value) {
   return typeof Node !== "undefined" && value instanceof Node;
 }
 
+export const luminaTheme = {
+  colors: {
+    primary: "#2563eb",
+    primaryDark: "#1d4ed8",
+    primarySoft: "rgba(37, 99, 235, 0.12)",
+    danger: "#dc2626",
+    dangerDark: "#b91c1c",
+    dangerSoft: "rgba(220, 38, 38, 0.12)",
+    surface: "#ffffff",
+    surfaceMuted: "#f8fafc",
+    surfaceRaised: "#ffffff",
+    text: "#111827",
+    muted: "#64748b",
+    border: "#e5e7eb",
+    borderStrong: "#cbd5e1",
+    track: "#e2e8f0",
+    shadow: "rgba(15, 23, 42, 0.12)",
+    overlay: "rgba(15, 23, 42, 0.58)",
+    focus: "rgba(37, 99, 235, 0.18)",
+  },
+  radius: {
+    sm: "6px",
+    md: "8px",
+    lg: "12px",
+    xl: "16px",
+    pill: "999px",
+  },
+  shadow: {
+    xs: "0 1px 2px rgba(15, 23, 42, 0.06)",
+    sm: "0 8px 22px rgba(15, 23, 42, 0.08)",
+    md: "0 18px 44px rgba(15, 23, 42, 0.14)",
+    lg: "0 24px 70px rgba(15, 23, 42, 0.24)",
+  },
+  transition: "160ms ease",
+};
+
 export function isVNode(value) {
   return value && typeof value === "object" && typeof value.tag === "string";
 }
@@ -125,6 +161,38 @@ export function cleanStyle(style) {
   return Object.fromEntries(
     Object.entries(style || {}).filter(([, value]) => value !== undefined),
   );
+}
+
+export function fieldStyle(style = {}) {
+  return cleanStyle({
+    width: "100%",
+    minHeight: "38px",
+    padding: "9px 12px",
+    borderRadius: luminaTheme.radius.md,
+    border: `1px solid ${luminaTheme.colors.borderStrong}`,
+    backgroundColor: luminaTheme.colors.surface,
+    color: luminaTheme.colors.text,
+    font: "inherit",
+    fontSize: "14px",
+    outline: "none",
+    transition: `border-color ${luminaTheme.transition}, box-shadow ${luminaTheme.transition}, background-color ${luminaTheme.transition}`,
+    boxShadow: "0 1px 1px rgba(15, 23, 42, 0.03)",
+    ...style,
+  });
+}
+
+export function applyFieldFocus(event, style = {}) {
+  event.target.style.borderColor =
+    style.borderColor || luminaTheme.colors.primary;
+  event.target.style.boxShadow =
+    style.boxShadow || `0 0 0 3px ${luminaTheme.colors.focus}`;
+}
+
+export function clearFieldFocus(event, style = {}) {
+  event.target.style.borderColor =
+    style.borderColor || luminaTheme.colors.borderStrong;
+  event.target.style.boxShadow =
+    style.boxShadow || "0 1px 1px rgba(15, 23, 42, 0.03)";
 }
 
 export function omitProps(props = {}, omitted = []) {

@@ -1,5 +1,6 @@
 import {
   cleanStyle,
+  luminaTheme,
   normalizeWidgetArgs,
   omitProps,
   px,
@@ -21,6 +22,7 @@ export function GestureDetector(
         "onPanStart",
         "onPanUpdate",
         "onPanEnd",
+        "radius",
       ]),
       onClick: props.onTap,
       onDoubleClick: props.onDoubleTap,
@@ -30,6 +32,7 @@ export function GestureDetector(
       style: cleanStyle({
         touchAction: props.touchAction || "manipulation",
         cursor: props.cursor || (props.onTap ? "pointer" : undefined),
+        borderRadius: px(props.radius),
         ...props.style,
       }),
     },
@@ -52,6 +55,7 @@ export function AbsorbPointer(propsOrChildren = {}, maybeChildren = undefined) {
       ...omitProps(props, ["absorbing"]),
       style: cleanStyle({
         pointerEvents: absorbing ? "auto" : undefined,
+        opacity: absorbing && props.dim ? 0.62 : undefined,
         ...props.style,
       }),
       onClick: absorbing ? absorb : props.onClick,
@@ -90,7 +94,7 @@ export function Dismissible(propsOrChildren = {}, maybeChildren = undefined) {
   return {
     tag: "div",
     props: {
-      ...omitProps(props, ["direction", "onDismissed", "threshold"]),
+      ...omitProps(props, ["direction", "onDismissed", "threshold", "radius"]),
       tabIndex: props.tabIndex ?? 0,
       onClick: props.onClick,
       onPointerDown: (event) => {
@@ -121,7 +125,8 @@ export function Dismissible(propsOrChildren = {}, maybeChildren = undefined) {
       },
       style: cleanStyle({
         touchAction: "pan-y",
-        transition: "opacity 160ms ease, transform 160ms ease",
+        borderRadius: px(props.radius),
+        transition: `opacity ${luminaTheme.transition}, transform ${luminaTheme.transition}, box-shadow ${luminaTheme.transition}`,
         ...props.style,
       }),
     },
@@ -136,7 +141,7 @@ export function Draggable(propsOrChildren = {}, maybeChildren = undefined) {
   return {
     tag: "div",
     props: {
-      ...omitProps(props, ["data", "onDragStarted", "onDragCompleted"]),
+      ...omitProps(props, ["data", "onDragStarted", "onDragCompleted", "radius"]),
       draggable: true,
       onDragStart: (event) => {
         if (event.dataTransfer && props.data !== undefined) {
@@ -149,6 +154,8 @@ export function Draggable(propsOrChildren = {}, maybeChildren = undefined) {
         cursor: "grab",
         width: px(props.width),
         height: px(props.height),
+        borderRadius: px(props.radius),
+        transition: `box-shadow ${luminaTheme.transition}, transform ${luminaTheme.transition}`,
         ...props.style,
       }),
     },
@@ -163,7 +170,7 @@ export function DragTarget(propsOrChildren = {}, maybeChildren = undefined) {
   return {
     tag: "div",
     props: {
-      ...omitProps(props, ["onAccept", "onWillAccept"]),
+      ...omitProps(props, ["onAccept", "onWillAccept", "radius"]),
       onDragOver: (event) => {
         if (!props.onWillAccept || props.onWillAccept(event) !== false) {
           event.preventDefault();
@@ -177,7 +184,11 @@ export function DragTarget(propsOrChildren = {}, maybeChildren = undefined) {
         } catch (e) {}
         if (props.onAccept) props.onAccept(data, event);
       },
-      style: cleanStyle(props.style),
+      style: cleanStyle({
+        borderRadius: px(props.radius),
+        transition: `background-color ${luminaTheme.transition}, border-color ${luminaTheme.transition}`,
+        ...props.style,
+      }),
     },
     children,
     key: props.key,

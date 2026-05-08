@@ -5,6 +5,7 @@ import {
   edgeInsets,
   flexCrossAlignment,
   flexMainAlignment,
+  luminaTheme,
   normalizeWidgetArgs,
   px,
 } from "./utils.js";
@@ -311,7 +312,7 @@ export function Divider(props = {}) {
     minHeight:
       props.direction === "vertical" ? px(props.height, "100%") : undefined,
     border: "none",
-    backgroundColor: props.color || "#e0e0e0",
+    backgroundColor: props.color || luminaTheme.colors.border,
     margin: edgeInsets(
       props.margin ?? (props.direction === "vertical" ? "0 8px" : "8px 0"),
     ),
@@ -337,16 +338,19 @@ export function Card(propsOrChildren = {}, maybeChildren = undefined) {
     {
       ...props,
       decoration: {
-        color: "#ffffff",
-        border: "1px solid #e5e7eb",
-        borderRadius: props.radius ?? 8,
+        color: luminaTheme.colors.surfaceRaised,
+        border: `1px solid ${luminaTheme.colors.border}`,
+        borderRadius: props.radius ?? 12,
         boxShadow: props.elevation
-          ? `0 ${props.elevation}px ${props.elevation * 4}px rgba(15, 23, 42, 0.12)`
-          : "0 1px 2px rgba(15, 23, 42, 0.08)",
+          ? `0 ${props.elevation * 3}px ${props.elevation * 8}px rgba(15, 23, 42, 0.12)`
+          : luminaTheme.shadow.xs,
         ...(props.decoration || {}),
       },
       padding: props.padding ?? 16,
-      style: props.style,
+      style: {
+        transition: `box-shadow ${luminaTheme.transition}, border-color ${luminaTheme.transition}, transform ${luminaTheme.transition}`,
+        ...props.style,
+      },
     },
     children,
   );

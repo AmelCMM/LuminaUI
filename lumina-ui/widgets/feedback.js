@@ -1,6 +1,7 @@
 import {
   cleanStyle,
   ensureGlobalStyle,
+  luminaTheme,
   normalizeWidgetArgs,
   omitProps,
   px,
@@ -31,7 +32,8 @@ export function ModalBarrier(props = {}) {
       style: cleanStyle({
         position: "fixed",
         inset: 0,
-        backgroundColor: props.color || "rgba(15, 23, 42, 0.56)",
+        backgroundColor: props.color || luminaTheme.colors.overlay,
+        backdropFilter: "blur(2px)",
         zIndex: props.zIndex ?? 1000,
         ...props.style,
       }),
@@ -88,9 +90,12 @@ export function Dialog(propsOrChildren = {}, maybeChildren = undefined) {
             zIndex: zIndex + 1,
             width: px(props.width, "min(100%, 420px)"),
             maxWidth: "100%",
-            borderRadius: "10px",
-            backgroundColor: "#ffffff",
-            boxShadow: "0 24px 64px rgba(15, 23, 42, 0.28)",
+            maxHeight: "calc(100vh - 40px)",
+            overflow: "auto",
+            border: `1px solid ${luminaTheme.colors.border}`,
+            borderRadius: luminaTheme.radius.xl,
+            backgroundColor: luminaTheme.colors.surface,
+            boxShadow: luminaTheme.shadow.lg,
             ...props.style,
           }),
         },
@@ -116,7 +121,7 @@ export function AlertDialog(props = {}) {
         tag: "div",
         props: {
           style: {
-            padding: "20px",
+            padding: "22px",
             display: "flex",
             flexDirection: "column",
             gap: "12px",
@@ -126,14 +131,26 @@ export function AlertDialog(props = {}) {
           props.title
             ? {
                 tag: "h2",
-                props: { style: { margin: 0, fontSize: "20px" } },
+                props: {
+                  style: {
+                    margin: 0,
+                    fontSize: "20px",
+                    lineHeight: 1.2,
+                    color: luminaTheme.colors.text,
+                  },
+                },
                 children: [props.title],
               }
             : null,
           props.content
             ? {
                 tag: "div",
-                props: { style: { lineHeight: 1.5 } },
+                props: {
+                  style: {
+                    lineHeight: 1.5,
+                    color: luminaTheme.colors.muted,
+                  },
+                },
                 children: Array.isArray(props.content)
                   ? props.content
                   : [props.content],
@@ -177,14 +194,15 @@ export function SnackBar(propsOrChildren = {}, maybeChildren = undefined) {
         zIndex: props.zIndex ?? 1100,
         display: "flex",
         alignItems: "center",
-        gap: "16px",
+        gap: "14px",
         minWidth: "min(420px, calc(100vw - 32px))",
         maxWidth: "calc(100vw - 32px)",
         padding: "12px 14px",
-        borderRadius: "8px",
-        backgroundColor: "#111827",
+        border: "1px solid rgba(255, 255, 255, 0.10)",
+        borderRadius: luminaTheme.radius.lg,
+        backgroundColor: "#0f172a",
         color: "#ffffff",
-        boxShadow: "0 14px 36px rgba(15, 23, 42, 0.28)",
+        boxShadow: luminaTheme.shadow.md,
         ...props.style,
       }),
     },
@@ -234,9 +252,9 @@ export function LinearProgressIndicator(props = {}) {
         position: "relative",
         overflow: "hidden",
         width: "100%",
-        height: px(props.height ?? 4),
+        height: px(props.height ?? 6),
         borderRadius: "999px",
-        backgroundColor: props.trackColor || "#e5e7eb",
+        backgroundColor: props.trackColor || luminaTheme.colors.track,
         ...props.style,
       }),
     },
@@ -250,7 +268,7 @@ export function LinearProgressIndicator(props = {}) {
             width: determinate
               ? `${Math.max(0, Math.min(1, value)) * 100}%`
               : "55%",
-            backgroundColor: props.color || "#2563eb",
+            backgroundColor: props.color || luminaTheme.colors.primary,
             borderRadius: "inherit",
             animation: determinate
               ? undefined
@@ -279,8 +297,8 @@ export function CircularProgressIndicator(props = {}) {
         width: px(size),
         height: px(size),
         borderRadius: "50%",
-        border: `${px(strokeWidth)} solid ${props.trackColor || "#e5e7eb"}`,
-        borderTopColor: props.color || "#2563eb",
+        border: `${px(strokeWidth)} solid ${props.trackColor || luminaTheme.colors.track}`,
+        borderTopColor: props.color || luminaTheme.colors.primary,
         animation: "lumina-spin 0.8s linear infinite",
         ...props.style,
       }),

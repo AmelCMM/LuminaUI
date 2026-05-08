@@ -1,3 +1,5 @@
+import { luminaTheme } from "./utils.js";
+
 export function Text(content = "", props = {}) {
   const {
     size,
@@ -20,6 +22,8 @@ export function Text(content = "", props = {}) {
     textAlign: align || "left",
     margin: 0,
     lineHeight: lineHeight || "1.5",
+    letterSpacing: "0",
+    WebkitFontSmoothing: "antialiased",
     ...(userStyle || {}),
   };
 
@@ -61,7 +65,7 @@ export function Heading(props = {}, children = []) {
 
 export function Caption(props = {}, children = []) {
   const content = Array.isArray(children) ? children : [children];
-  return Text(content, { size: 12, color: "#666", ...props });
+  return Text(content, { size: 12, color: luminaTheme.colors.muted, ...props });
 }
 
 export function DefaultTextStyle(props = {}, children = []) {

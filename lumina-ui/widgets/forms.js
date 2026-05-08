@@ -1,9 +1,29 @@
 import {
+  applyFieldFocus,
   cleanStyle,
+  clearFieldFocus,
+  ensureGlobalStyle,
+  fieldStyle,
+  luminaTheme,
   normalizeWidgetArgs,
   omitProps,
   px,
 } from "./utils.js";
+
+function ensureFormStyles() {
+  ensureGlobalStyle(
+    "lumina-form-styles",
+    `
+.lumina-field:focus-visible {
+  outline: 2px solid ${luminaTheme.colors.focus};
+  outline-offset: 2px;
+}
+.lumina-field:hover:not(:disabled) {
+  border-color: ${luminaTheme.colors.primary} !important;
+}
+`,
+  );
+}
 
 export function Form(propsOrChildren = {}, maybeChildren = undefined) {
   const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
@@ -21,6 +41,7 @@ export function Form(propsOrChildren = {}, maybeChildren = undefined) {
         display: "flex",
         flexDirection: "column",
         gap: px(props.gap ?? 12),
+        color: luminaTheme.colors.text,
         ...props.style,
       }),
     },
@@ -61,9 +82,19 @@ export function FormField(propsOrChildren = {}, maybeChildren = undefined) {
                 gap: "4px",
                 fontSize: "13px",
                 fontWeight: 700,
+                color: luminaTheme.colors.text,
               },
             },
-            children: [label, required ? "*" : ""],
+            children: [
+              label,
+              required
+                ? {
+                    tag: "span",
+                    props: { style: { color: luminaTheme.colors.danger } },
+                    children: ["*"],
+                  }
+                : "",
+            ],
           }
         : null,
       ...children,
@@ -74,7 +105,7 @@ export function FormField(propsOrChildren = {}, maybeChildren = undefined) {
               style: {
                 minHeight: "16px",
                 fontSize: "12px",
-                color: errorText ? "#dc2626" : "#6b7280",
+                color: errorText ? luminaTheme.colors.danger : luminaTheme.colors.muted,
               },
             },
             children: [errorText || helperText],
@@ -95,6 +126,7 @@ export function Radio({
   style = {},
   ...props
 }) {
+  ensureFormStyles();
   return {
     tag: "label",
     props: {
@@ -103,8 +135,12 @@ export function Radio({
         display: "inline-flex",
         alignItems: "center",
         gap: "8px",
+        color: luminaTheme.colors.text,
+        fontSize: "14px",
+        lineHeight: 1.4,
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.55 : 1,
+        userSelect: "none",
         ...style,
       }),
     },
@@ -117,6 +153,12 @@ export function Radio({
           value,
           checked: value === groupValue,
           disabled,
+          style: {
+            width: "16px",
+            height: "16px",
+            accentColor: luminaTheme.colors.primary,
+            cursor: disabled ? "not-allowed" : "pointer",
+          },
           onChange: () => {
             if (!disabled && onChange) onChange(value);
           },
@@ -191,6 +233,7 @@ export function Slider({
       },
       style: cleanStyle({
         width: "100%",
+        accentColor: luminaTheme.colors.primary,
         cursor: disabled ? "not-allowed" : "pointer",
         ...style,
       }),
@@ -218,17 +261,20 @@ export function Dropdown({
       onChange: (event) => {
         if (onChange) onChange(event.target.value);
       },
-      style: cleanStyle({
-        width: "100%",
-        padding: "8px 10px",
-        borderRadius: "6px",
-        border: "1px solid #d1d5db",
-        backgroundColor: "#ffffff",
-        color: "inherit",
-        font: "inherit",
-        outline: "none",
+      onFocus: (event) => {
+        if (props.onFocus) props.onFocus(event);
+        if (!event.defaultPrevented) applyFieldFocus(event, style);
+      },
+      onBlur: (event) => {
+        if (props.onBlur) props.onBlur(event);
+        if (!event.defaultPrevented) clearFieldFocus(event, style);
+      },
+      style: fieldStyle({
+        appearance: "auto",
+        cursor: disabled ? "not-allowed" : "pointer",
         ...style,
       }),
+      className: ["lumina-field", props.className].filter(Boolean).join(" "),
     },
     children: [
       placeholder
@@ -261,6 +307,7 @@ export function TextArea({
   style = {},
   ...props
 }) {
+  ensureFormStyles();
   return {
     tag: "textarea",
     props: {
@@ -271,18 +318,21 @@ export function TextArea({
       onInput: (event) => {
         if (onChange) onChange(event.target.value);
       },
-      style: cleanStyle({
-        width: "100%",
+      onFocus: (event) => {
+        if (props.onFocus) props.onFocus(event);
+        if (!event.defaultPrevented) applyFieldFocus(event, style);
+      },
+      onBlur: (event) => {
+        if (props.onBlur) props.onBlur(event);
+        if (!event.defaultPrevented) clearFieldFocus(event, style);
+      },
+      style: fieldStyle({
         resize: "vertical",
-        padding: "8px 10px",
-        borderRadius: "6px",
-        border: "1px solid #d1d5db",
-        backgroundColor: "#ffffff",
-        color: "inherit",
-        font: "inherit",
-        outline: "none",
+        minHeight: "96px",
+        lineHeight: 1.5,
         ...style,
       }),
+      className: ["lumina-field", props.className].filter(Boolean).join(" "),
     },
     children: [],
     key: props.key,

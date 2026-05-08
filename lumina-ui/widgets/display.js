@@ -1,5 +1,6 @@
 import {
   cleanStyle,
+  luminaTheme,
   normalizeWidgetArgs,
   omitProps,
   px,
@@ -94,6 +95,7 @@ export function Image(props = {}) {
         height: px(height, "auto"),
         objectFit: fit,
         borderRadius: px(radius),
+        backgroundColor: luminaTheme.colors.surfaceMuted,
         ...style,
       }),
     },
@@ -109,8 +111,8 @@ export function CircleAvatar(propsOrChildren = {}, maybeChildren = undefined) {
     alt = "",
     initials,
     size = 40,
-    backgroundColor = "#e5e7eb",
-    color = "#111827",
+    backgroundColor = luminaTheme.colors.track,
+    color = luminaTheme.colors.text,
     style = {},
   } = props;
 
@@ -152,6 +154,7 @@ export function CircleAvatar(propsOrChildren = {}, maybeChildren = undefined) {
         fontSize: px(Math.max(12, Number(size) * 0.38 || 16)),
         fontWeight: 700,
         flexShrink: 0,
+        boxShadow: "inset 0 0 0 1px rgba(15, 23, 42, 0.06)",
         ...style,
       }),
     },
@@ -164,7 +167,7 @@ export function Placeholder(props = {}) {
   const {
     width = "100%",
     height = 120,
-    color = "#94a3b8",
+    color = luminaTheme.colors.muted,
     label = "Placeholder",
     style = {},
   } = props;
@@ -182,12 +185,14 @@ export function Placeholder(props = {}) {
         width: px(width),
         height: px(height),
         color,
-        border: `1px dashed ${color}`,
-        backgroundImage: `linear-gradient(135deg, transparent 48%, ${color} 49%, ${color} 51%, transparent 52%),
-          linear-gradient(45deg, transparent 48%, ${color} 49%, ${color} 51%, transparent 52%)`,
+        border: `1px dashed ${luminaTheme.colors.borderStrong}`,
+        borderRadius: luminaTheme.radius.lg,
+        backgroundColor: luminaTheme.colors.surfaceMuted,
+        backgroundImage: `linear-gradient(135deg, transparent 48%, rgba(100, 116, 139, 0.30) 49%, rgba(100, 116, 139, 0.30) 51%, transparent 52%),
+          linear-gradient(45deg, transparent 48%, rgba(100, 116, 139, 0.30) 49%, rgba(100, 116, 139, 0.30) 51%, transparent 52%)`,
         backgroundSize: "100% 100%",
         fontSize: "12px",
-        fontWeight: 600,
+        fontWeight: 700,
         ...style,
       }),
     },
@@ -242,6 +247,8 @@ export function Badge(propsOrChildren = {}, maybeChildren = undefined) {
             fontSize: "11px",
             fontWeight: 700,
             lineHeight: 1,
+            border: `2px solid ${luminaTheme.colors.surface}`,
+            boxShadow: "0 4px 10px rgba(15, 23, 42, 0.18)",
             ...position,
           }),
         },
@@ -399,7 +406,7 @@ export function PhysicalModel(propsOrChildren = {}, maybeChildren = undefined) {
         "borderRadius",
       ]),
       style: cleanStyle({
-        backgroundColor: props.color || "#ffffff",
+        backgroundColor: props.color || luminaTheme.colors.surface,
         borderRadius: px(props.borderRadius ?? 8),
         boxShadow: `0 ${elevation}px ${elevation * 4}px ${
           props.shadowColor || "rgba(15, 23, 42, 0.18)"
