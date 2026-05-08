@@ -40,7 +40,7 @@ export function mount(componentFn, container) {
 
 function renderWidget(widget, forceUpdate) {
   // primitives
-  if (widget === null || widget === undefined)
+  if (isEmptyWidget(widget))
     return document.createTextNode("");
   if (typeof widget === "string" || typeof widget === "number")
     return document.createTextNode(String(widget));
@@ -88,6 +88,7 @@ function renderWidget(widget, forceUpdate) {
 function normalizeVNode(v) {
   // If given a function, call it (no forceUpdate)
   if (typeof v === "function") v = v();
+  if (isEmptyWidget(v)) return { tag: "empty", children: [] };
   if (Array.isArray(v))
     return { tag: "fragment", children: v.map(normalizeVNode) };
   if (v && v.tag) return v;
@@ -108,6 +109,8 @@ function patchWidget(parent, oldWidget, newWidget, index = 0) {
   const oldKey = oldV.key ?? (oldV.props && oldV.props.key);
   const newKey = newV.key ?? (newV.props && newV.props.key);
 
+  if (oldTag === "empty" && newTag === "empty") return;
+
   if (oldKey != null || newKey != null) {
     // keyed children are handled at parent's loop level — here we fall back to replace if mismatched
     if (oldKey !== newKey || oldTag !== newTag) {
@@ -123,16 +126,19 @@ function patchWidget(parent, oldWidget, newWidget, index = 0) {
 
   // Text node
   if (
+    newTag === "empty" ||
     newTag === "text" ||
     typeof newWidget === "string" ||
     typeof newWidget === "number"
   ) {
+    const nextText =
+      newTag === "empty" ? "" : String(newV.children?.[0] ?? newWidget);
     if (
       dom &&
       dom.nodeType === Node.TEXT_NODE &&
-      dom.textContent !== String(newV.children?.[0] ?? newWidget)
+      dom.textContent !== nextText
     ) {
-      dom.textContent = String(newV.children?.[0] ?? newWidget);
+      dom.textContent = nextText;
     } else if (dom && dom.nodeType !== Node.TEXT_NODE) {
       parent.replaceChild(renderWidget(newWidget), dom);
     }
@@ -207,10 +213,15 @@ function patchWidget(parent, oldWidget, newWidget, index = 0) {
   for (let i = 0; i < maxLen; i++) {
     const oldC = oldChildren[i];
     const newC = newChildren[i];
-    if (!oldC && newC) {
+    const oldEmpty = isEmptyWidget(oldC);
+    const newEmpty = isEmptyWidget(newC);
+
+    if (oldEmpty && newEmpty) {
+      continue;
+    } else if (oldEmpty && !newEmpty) {
       const newDom = renderWidget(newC);
-      dom.appendChild(newDom);
-    } else if (oldC && !newC) {
+      dom.insertBefore(newDom, dom.childNodes[i] || null);
+    } else if (!oldEmpty && newEmpty) {
       if (dom.childNodes[i]) dom.removeChild(dom.childNodes[i]);
     } else {
       patchWidget(dom, oldC, newC, i);
@@ -286,4 +297,8 @@ function updateProps(dom, oldProps = {}, newProps = {}) {
       dom.setAttribute(key, String(value));
     }
   });
+}
+
+function isEmptyWidget(widget) {
+  return widget === null || widget === undefined || widget === false;
 }

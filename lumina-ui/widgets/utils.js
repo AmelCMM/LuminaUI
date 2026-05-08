@@ -126,3 +126,26 @@ export function cleanStyle(style) {
     Object.entries(style || {}).filter(([, value]) => value !== undefined),
   );
 }
+
+export function omitProps(props = {}, omitted = []) {
+  const omittedSet = new Set(["child", "children", "style", "key", ...omitted]);
+  return Object.fromEntries(
+    Object.entries(props).filter(([key]) => !omittedSet.has(key)),
+  );
+}
+
+export function ensureGlobalStyle(id, css) {
+  if (
+    typeof document === "undefined" ||
+    !document.head ||
+    typeof document.getElementById !== "function" ||
+    document.getElementById(id)
+  ) {
+    return;
+  }
+
+  const style = document.createElement("style");
+  style.id = id;
+  style.textContent = css;
+  document.head.appendChild(style);
+}

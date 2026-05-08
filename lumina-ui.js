@@ -35,6 +35,28 @@ export {
   Checkbox,
   Switch,
 } from "./lumina-ui/widgets/controls.js";
+export {
+  Badge,
+  CircleAvatar,
+  ClipRRect,
+  Icon,
+  Image,
+  Placeholder,
+} from "./lumina-ui/widgets/display.js";
+export {
+  GridView,
+  ListView,
+  SingleChildScrollView,
+} from "./lumina-ui/widgets/scrolling.js";
+export {
+  AlertDialog,
+  CircularProgressIndicator,
+  Dialog,
+  LinearProgressIndicator,
+  ModalBarrier,
+  SnackBar,
+  Tooltip,
+} from "./lumina-ui/widgets/feedback.js";
 export { Text, Heading, Caption } from "./lumina-ui/widgets/text.js";
 
 export { App } from "./lumina-ui/app/App.js";

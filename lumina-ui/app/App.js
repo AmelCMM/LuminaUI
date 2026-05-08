@@ -15,6 +15,21 @@ import {
   Wrap,
 } from "../widgets/layout.js";
 import { Button, Input, Switch } from "../widgets/controls.js";
+import {
+  Badge,
+  CircleAvatar,
+  ClipRRect,
+  Icon,
+  Placeholder,
+} from "../widgets/display.js";
+import {
+  CircularProgressIndicator,
+  Dialog,
+  LinearProgressIndicator,
+  SnackBar,
+  Tooltip,
+} from "../widgets/feedback.js";
+import { GridView, ListView, SingleChildScrollView } from "../widgets/scrolling.js";
 import { Caption, Heading, Text } from "../widgets/text.js";
 import { createState } from "../core/state.js";
 
@@ -23,6 +38,8 @@ const [getCounterOne, setCounterOne, subscribeCounterOne] = createState(0);
 const [getCounterTwo, setCounterTwo, subscribeCounterTwo] = createState(10);
 const [getTodos, setTodos, subscribeTodos] = createState([]);
 const [getInput, setInput, subscribeInput] = createState("");
+const [getDialogOpen, setDialogOpen, subscribeDialogOpen] = createState(false);
+const [getSnackOpen, setSnackOpen, subscribeSnackOpen] = createState(false);
 
 const subscribedUpdates = new WeakSet();
 
@@ -37,6 +54,8 @@ function bindState(forceUpdate) {
     subscribeCounterTwo,
     subscribeTodos,
     subscribeInput,
+    subscribeDialogOpen,
+    subscribeSnackOpen,
   ].forEach((subscribe) => subscribe(forceUpdate));
 
   subscribedUpdates.add(forceUpdate);
@@ -311,6 +330,256 @@ function WidgetGallery(theme) {
   );
 }
 
+function AdvancedDisplayGallery(theme) {
+  return Card(
+    {
+      elevation: 1,
+      style: {
+        backgroundColor: theme.surface,
+        borderColor: theme.border,
+        width: "min(100%, 560px)",
+      },
+    },
+    [
+      Column({ gap: 14 }, [
+        Row({ gap: 12, mainAxisAlignment: "spaceBetween" }, [
+          Heading({ level: 2, style: { color: theme.text } }, "Display"),
+          Badge({ label: "3", color: theme.warning, textColor: "#111827" }, [
+            Icon({ name: "star", color: theme.primary, label: "Featured" }),
+          ]),
+        ]),
+        Row({ gap: 12 }, [
+          CircleAvatar({
+            initials: "LU",
+            size: 52,
+            backgroundColor: theme.primary,
+            color: "#ffffff",
+          }),
+          Column({ gap: 3 }, [
+            Text("CircleAvatar + Badge + Icon", {
+              color: theme.text,
+              weight: 700,
+            }),
+            Caption(
+              { color: theme.muted },
+              "Display widgets are now separate from layout primitives.",
+            ),
+          ]),
+        ]),
+        ClipRRect({ radius: 10 }, [
+          Placeholder({
+            height: 128,
+            color: theme.primary,
+            label: "Image / Placeholder surface",
+            style: {
+              backgroundColor: theme.subtle,
+              color: theme.text,
+            },
+          }),
+        ]),
+        Wrap({ gap: 8 }, [
+          chip("Icon", theme),
+          chip("Image", theme),
+          chip("CircleAvatar", theme),
+          chip("Badge", theme),
+          chip("Placeholder", theme),
+          chip("ClipRRect", theme),
+        ]),
+      ]),
+    ],
+  );
+}
+
+function ScrollingGallery(theme) {
+  const rows = [
+    "SingleChildScrollView",
+    "ListView.builder",
+    "GridView",
+    "Horizontal list",
+    "Builder functions",
+    "Separators",
+  ];
+
+  return Card(
+    {
+      elevation: 1,
+      style: {
+        backgroundColor: theme.surface,
+        borderColor: theme.border,
+        width: "min(100%, 560px)",
+      },
+    },
+    [
+      Column({ gap: 14 }, [
+        Heading({ level: 2, style: { color: theme.text } }, "Scrolling"),
+        Row({ gap: 12, style: { alignItems: "stretch" } }, [
+          Expanded([
+            SingleChildScrollView({
+              maxHeight: 178,
+              style: {
+                border: `1px solid ${theme.border}`,
+                borderRadius: "8px",
+                backgroundColor: theme.subtle,
+              },
+              child: ListView({
+                items: rows,
+                gap: 8,
+                padding: 10,
+                itemBuilder: (label, index) =>
+                  Row(
+                    {
+                      key: label,
+                      gap: 8,
+                      style: {
+                        padding: "8px",
+                        borderRadius: "6px",
+                        backgroundColor: theme.surface,
+                      },
+                    },
+                    [
+                      CircleAvatar({
+                        initials: String(index + 1),
+                        size: 26,
+                        backgroundColor: theme.chip,
+                        color: theme.text,
+                      }),
+                      Text(label, { color: theme.text }),
+                    ],
+                  ),
+              }),
+            }),
+          ]),
+          Expanded([
+            GridView({
+              items: ["A", "B", "C", "D"],
+              columns: 2,
+              gap: 10,
+              itemBuilder: (label, index) =>
+                Container(
+                  {
+                    key: label,
+                    height: 82,
+                    alignment: "center",
+                    decoration: {
+                      color: [theme.primary, theme.accent, theme.warning, theme.chip][
+                        index
+                      ],
+                      borderRadius: 8,
+                    },
+                  },
+                  [
+                    Text(label, {
+                      color: index === 3 ? theme.text : "#ffffff",
+                      weight: 800,
+                      size: 22,
+                    }),
+                  ],
+                ),
+            }),
+          ]),
+        ]),
+      ]),
+    ],
+  );
+}
+
+function FeedbackGallery(theme) {
+  return Card(
+    {
+      elevation: 1,
+      style: {
+        backgroundColor: theme.surface,
+        borderColor: theme.border,
+        width: "min(100%, 560px)",
+      },
+    },
+    [
+      Column({ gap: 14 }, [
+        Heading({ level: 2, style: { color: theme.text } }, "Feedback"),
+        Row({ gap: 12 }, [
+          Tooltip({ message: "This uses the native title tooltip." }, [
+            Button({
+              text: "Open Dialog",
+              onClick: () => setDialogOpen(true),
+            }),
+          ]),
+          Button({
+            text: "Show SnackBar",
+            variant: "secondary",
+            onClick: () => setSnackOpen(true),
+          }),
+        ]),
+        Column({ gap: 10 }, [
+          LinearProgressIndicator({
+            value: 0.68,
+            color: theme.primary,
+            trackColor: theme.border,
+          }),
+          Row({ gap: 10 }, [
+            CircularProgressIndicator({
+              size: 28,
+              color: theme.accent,
+              trackColor: theme.border,
+            }),
+            Caption(
+              { color: theme.muted },
+              "Progress indicators support determinate and indeterminate modes.",
+            ),
+          ]),
+        ]),
+      ]),
+    ],
+  );
+}
+
+function AppOverlays(theme) {
+  return [
+    Dialog(
+      {
+        open: getDialogOpen(),
+        onDismiss: () => setDialogOpen(false),
+        style: {
+          backgroundColor: theme.surface,
+          border: `1px solid ${theme.border}`,
+        },
+      },
+      [
+        Padding({ padding: 20 }, [
+          Column({ gap: 14 }, [
+            Row({ gap: 10 }, [
+              Icon({ name: "info", color: theme.primary }),
+              Heading(
+                { level: 2, style: { color: theme.text } },
+                "Dialog Widget",
+              ),
+            ]),
+            Text(
+              "This is a real composable overlay built from LuminaUI widgets. Next we can grow this into AlertDialog, bottom sheets, menus, and route-aware modals.",
+              { color: theme.text },
+            ),
+            Row({ mainAxisAlignment: "end" }, [
+              Button({
+                text: "Close",
+                onClick: () => setDialogOpen(false),
+              }),
+            ]),
+          ]),
+        ]),
+      ],
+    ),
+    SnackBar({
+      open: getSnackOpen(),
+      message: "SnackBar is live. Advanced feedback layer unlocked.",
+      action: Button({
+        text: "Dismiss",
+        variant: "text",
+        onClick: () => setSnackOpen(false),
+        style: { color: "#ffffff", padding: "4px 6px" },
+      }),
+    }),
+  ];
+}
+
 function chip(label, theme) {
   return Container(
     {
@@ -427,7 +696,11 @@ export function App(forceUpdate) {
             }),
             TodoApp(theme),
             WidgetGallery(theme),
+            AdvancedDisplayGallery(theme),
+            ScrollingGallery(theme),
+            FeedbackGallery(theme),
           ]),
+          ...AppOverlays(theme),
         ]),
       ],
     ),

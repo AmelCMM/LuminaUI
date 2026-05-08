@@ -70,9 +70,7 @@ function App(update) {
 }
 
 const root = document.getElementById("app");
-
-let update;
-update = mount(() => App(update), root);
+mount(App, root);
 ```
 
 ---
@@ -90,7 +88,11 @@ lumina-ui/
 ├── widgets/
 │   ├── layout.js       # Column, Row, layout primitives
 │   ├── controls.js     # Button, Input, etc.
-│   └── text.js         # Text rendering
+│   ├── display.js      # Icon, Image, avatars, badges
+│   ├── scrolling.js    # ScrollView, ListView, GridView
+│   ├── feedback.js     # Dialogs, snackbars, progress
+│   ├── text.js         # Text rendering
+│   └── utils.js        # Shared widget helpers
 │
 ├── app/
 │   └── App.js          # application code
@@ -110,6 +112,14 @@ lumina-ui/
 **Text:** `Text`, `Heading`, `Caption`
 
 **Controls:** `Button`, `Input`, `TextField`, `Checkbox`, `Switch`
+
+**Display:** `Icon`, `Image`, `CircleAvatar`, `Badge`, `Placeholder`,
+`ClipRRect`
+
+**Scrolling:** `SingleChildScrollView`, `ListView`, `GridView`
+
+**Feedback:** `Dialog`, `AlertDialog`, `ModalBarrier`, `SnackBar`, `Tooltip`,
+`LinearProgressIndicator`, `CircularProgressIndicator`
 
 The API supports both compact children-first calls like `Column([Text("Hi")])`
 and configured calls like `Column({ gap: 8 }, [Text("Hi")])`.
@@ -158,11 +168,12 @@ These are the next things to fix.
 - [x] `Padding`, `Expanded`, `Center` widgets
 - [x] First layout bricks: `Align`, `SizedBox`, `Flexible`, `Spacer`, `Wrap`,
       `Stack`, `Positioned`, `Divider`, `Card`
-- [ ] Display widgets: `Icon`, `Image`, `CircleAvatar`, `Placeholder`
-- [ ] Form widgets: `TextField`, `Radio`, `Slider`, `Dropdown`, `Form`
-- [ ] Scrolling widgets: `ListView`, `GridView`, `SingleChildScrollView`
+- [x] Display widgets: `Icon`, `Image`, `CircleAvatar`, `Badge`,
+      `Placeholder`, `ClipRRect`
+- [x] Scrolling widgets: `ListView`, `GridView`, `SingleChildScrollView`
+- [x] Feedback widgets: dialog, snackbar, tooltip, progress indicators
+- [ ] Form widgets: `Radio`, `Slider`, `Dropdown`, `Form`
 - [ ] Navigation widgets: tabs, drawer, route shell
-- [ ] Feedback widgets: dialog, snackbar, tooltip, progress indicators
 - [ ] Animation widgets: animated container, opacity, cross-fade
 - [ ] Smarter rendering (diffing)
 - [ ] Component isolation
