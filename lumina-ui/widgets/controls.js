@@ -191,6 +191,7 @@ export function Checkbox({
   onChange,
   label = "",
   id,
+  disabled = false,
   style = {},
   ...props
 }) {
@@ -208,8 +209,9 @@ export function Checkbox({
         color: luminaTheme.colors.text,
         fontSize: "14px",
         lineHeight: 1.4,
-        cursor: props.disabled ? "not-allowed" : "pointer",
+        cursor: disabled ? "not-allowed" : "pointer",
         userSelect: "none",
+        opacity: disabled ? 0.6 : 1,
         ...style,
       },
       ...props,
@@ -221,15 +223,15 @@ export function Checkbox({
           id: finalId,
           type: "checkbox",
           checked: !!checked,
-          disabled: props.disabled,
+          disabled,
           onChange: (e) => {
-            if (onChange) onChange(e.target.checked);
+            if (!disabled && onChange) onChange(e.target.checked);
           },
           style: {
             width: "16px",
             height: "16px",
             accentColor: luminaTheme.colors.primary,
-            cursor: props.disabled ? "not-allowed" : "pointer",
+            cursor: disabled ? "not-allowed" : "pointer",
           },
         },
         children: [],
@@ -243,6 +245,7 @@ export function Switch({
   value = false,
   onChange,
   ariaLabel,
+  disabled = false,
   style = {},
   ...props
 }) {
@@ -253,33 +256,37 @@ export function Switch({
     borderRadius: luminaTheme.radius.pill,
     backgroundColor: value ? luminaTheme.colors.primary : luminaTheme.colors.track,
     border: `1px solid ${value ? luminaTheme.colors.primary : luminaTheme.colors.borderStrong}`,
-    cursor: "pointer",
+    cursor: disabled ? "not-allowed" : "pointer",
     position: "relative",
     transition: `background-color ${luminaTheme.transition}, border-color ${luminaTheme.transition}, box-shadow ${luminaTheme.transition}`,
     outline: "none",
     boxShadow: value ? "0 8px 18px rgba(37, 99, 235, 0.16)" : "none",
+    opacity: disabled ? 0.6 : 1,
     ...style,
   };
 
   return {
     tag: "button",
     props: {
+      ...props,
       role: "switch",
       type: props.type || "button",
       "aria-checked": !!value,
       "aria-label": ariaLabel || "toggle",
+      disabled,
       tabIndex: 0,
-      onClick: () => {
-        if (onChange) onChange(!value);
+      onClick: (event) => {
+        if (props.onClick) props.onClick(event);
+        if (!disabled && onChange) onChange(!value);
       },
       onKeyDown: (e) => {
+        if (props.onKeyDown) props.onKeyDown(e);
         if (e.key === " " || e.key === "Enter") {
           e.preventDefault();
-          if (onChange) onChange(!value);
+          if (!disabled && onChange) onChange(!value);
         }
       },
       style: base,
-      ...props,
       className: ["lumina-switch", props.className].filter(Boolean).join(" "),
     },
     children: [

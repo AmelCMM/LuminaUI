@@ -229,6 +229,7 @@ export function Slider({
       value,
       disabled,
       onInput: (event) => {
+        if (props.onInput) props.onInput(event);
         if (onChange) onChange(Number(event.target.value));
       },
       style: cleanStyle({
@@ -316,6 +317,7 @@ export function TextArea({
       rows,
       placeholder,
       onInput: (event) => {
+        if (props.onInput) props.onInput(event);
         if (onChange) onChange(event.target.value);
       },
       onFocus: (event) => {

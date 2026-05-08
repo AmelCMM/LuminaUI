@@ -1,5 +1,5 @@
 export function createElement(tag, props = {}) {
-  const { children, style, className, dataset, ...rest } = props;
+  const { children, style, className, dataset, key, ...rest } = props;
   const element = document.createElement(tag);
 
   // Apply classes

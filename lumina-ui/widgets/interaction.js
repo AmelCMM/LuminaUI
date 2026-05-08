@@ -11,6 +11,13 @@ export function GestureDetector(
   maybeChildren = undefined,
 ) {
   const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  let longPressTimer = null;
+  const clearLongPress = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  };
 
   return {
     tag: "div",
@@ -23,12 +30,32 @@ export function GestureDetector(
         "onPanUpdate",
         "onPanEnd",
         "radius",
+        "longPressDelay",
       ]),
       onClick: props.onTap,
       onDoubleClick: props.onDoubleTap,
-      onPointerDown: props.onPanStart || props.onLongPress,
-      onPointerMove: props.onPanUpdate,
-      onPointerUp: props.onPanEnd,
+      onPointerDown: (event) => {
+        if (props.onPanStart) props.onPanStart(event);
+        if (props.onLongPress) {
+          clearLongPress();
+          longPressTimer = setTimeout(() => {
+            longPressTimer = null;
+            props.onLongPress(event);
+          }, props.longPressDelay ?? 500);
+        }
+      },
+      onPointerMove: (event) => {
+        clearLongPress();
+        if (props.onPanUpdate) props.onPanUpdate(event);
+      },
+      onPointerUp: (event) => {
+        clearLongPress();
+        if (props.onPanEnd) props.onPanEnd(event);
+      },
+      onPointerCancel: (event) => {
+        clearLongPress();
+        if (props.onPointerCancel) props.onPointerCancel(event);
+      },
       style: cleanStyle({
         touchAction: props.touchAction || "manipulation",
         cursor: props.cursor || (props.onTap ? "pointer" : undefined),
@@ -48,22 +75,49 @@ export function AbsorbPointer(propsOrChildren = {}, maybeChildren = undefined) {
     event.preventDefault();
   };
   const absorbing = props.absorbing !== false;
+  const stylePosition = props.style?.position;
+  const position =
+    absorbing && (!stylePosition || stylePosition === "static")
+      ? "relative"
+      : stylePosition;
 
   return {
     tag: "div",
     props: {
-      ...omitProps(props, ["absorbing"]),
+      ...omitProps(props, ["absorbing", "cursor", "dim"]),
       style: cleanStyle({
-        pointerEvents: absorbing ? "auto" : undefined,
         opacity: absorbing && props.dim ? 0.62 : undefined,
         ...props.style,
+        position,
       }),
       onClick: absorbing ? absorb : props.onClick,
       onPointerDown: absorbing ? absorb : props.onPointerDown,
       onPointerUp: absorbing ? absorb : props.onPointerUp,
       onPointerMove: absorbing ? absorb : props.onPointerMove,
     },
-    children,
+    children: absorbing
+      ? [
+          ...children,
+          {
+            tag: "div",
+            props: {
+              "aria-hidden": "true",
+              onClick: absorb,
+              onPointerDown: absorb,
+              onPointerUp: absorb,
+              onPointerMove: absorb,
+              style: {
+                position: "absolute",
+                inset: 0,
+                zIndex: 2147483647,
+                backgroundColor: "transparent",
+                cursor: props.cursor,
+              },
+            },
+            children: [],
+          },
+        ]
+      : children,
     key: props.key,
   };
 }
@@ -145,7 +199,11 @@ export function Draggable(propsOrChildren = {}, maybeChildren = undefined) {
       draggable: true,
       onDragStart: (event) => {
         if (event.dataTransfer && props.data !== undefined) {
-          event.dataTransfer.setData("text/plain", JSON.stringify(props.data));
+          try {
+            event.dataTransfer.setData("text/plain", JSON.stringify(props.data));
+          } catch (error) {
+            event.dataTransfer.setData("text/plain", String(props.data));
+          }
         }
         if (props.onDragStarted) props.onDragStarted(event);
       },

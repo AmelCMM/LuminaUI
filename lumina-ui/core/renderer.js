@@ -49,7 +49,7 @@ function renderWidget(widget, forceUpdate) {
   // arrays -> fragment
   if (Array.isArray(widget)) {
     const fragment = document.createDocumentFragment();
-    widget.forEach((child) => {
+    flattenChildren(widget).forEach((child) => {
       const childDom = renderWidget(child, forceUpdate);
       if (childDom) fragment.appendChild(childDom);
     });
@@ -64,7 +64,7 @@ function renderWidget(widget, forceUpdate) {
   // vnode object
   if (widget.tag) {
     const props = widget.props || {};
-    const children = widget.children || [];
+    const children = flattenChildren(widget.children || []);
 
     const element = createElement(widget.tag, {
       ...(props || {}),
@@ -90,8 +90,13 @@ function normalizeVNode(v) {
   if (typeof v === "function") v = v();
   if (isEmptyWidget(v)) return { tag: "empty", children: [] };
   if (Array.isArray(v))
-    return { tag: "fragment", children: v.map(normalizeVNode) };
-  if (v && v.tag) return v;
+    return { tag: "fragment", children: flattenChildren(v).map(normalizeVNode) };
+  if (v && v.tag) {
+    return {
+      ...v,
+      children: flattenChildren(v.children || []),
+    };
+  }
   return { tag: "text", children: [String(v)] };
 }
 
@@ -153,8 +158,8 @@ function patchWidget(parent, oldWidget, newWidget, index = 0, currentDom = null)
   updateProps(dom, oldProps, newProps);
 
   // Reconcile children (simple keyed-first pass)
-  const oldChildren = oldV.children || [];
-  const newChildren = newV.children || [];
+  const oldChildren = flattenChildren(oldV.children || []);
+  const newChildren = flattenChildren(newV.children || []);
 
   // Build key -> index map for old children
   const keyed = new Map();
@@ -240,14 +245,27 @@ function updateProps(dom, oldProps = {}, newProps = {}) {
     }
     if (!(key in newProps) || newProps[key] === undefined || newProps[key] === null) {
       // cleanup reflecting props and attributes
-      if (
-        key === "value" ||
+      if (key === "style") {
+        dom.removeAttribute("style");
+        if (dom.style) dom.style.cssText = "";
+      } else if (key === "className") {
+        dom.className = "";
+        dom.removeAttribute("class");
+      } else if (key === "dataset" && typeof oldVal === "object") {
+        Object.keys(oldVal).forEach((k) => delete dom.dataset[k]);
+      } else if (key === "value") {
+        try {
+          dom.value = "";
+        } catch (e) {
+          dom.removeAttribute(key);
+        }
+      } else if (
         key === "checked" ||
         key === "disabled" ||
         key === "selected"
       ) {
         try {
-          dom[key] = undefined;
+          dom[key] = false;
         } catch (e) {
           dom.removeAttribute(key);
         }
@@ -263,7 +281,7 @@ function updateProps(dom, oldProps = {}, newProps = {}) {
     const oldValue = oldProps[key];
 
     if (value === undefined || value === null) return;
-    if (value === oldValue) return;
+    if (value === oldValue && !isReflectedDomProp(key)) return;
 
     if (key === "style" && typeof value === "object") {
       const previous = oldProps.style || {};
@@ -275,8 +293,12 @@ function updateProps(dom, oldProps = {}, newProps = {}) {
       const event = normalizeEventName(key);
       dom.addEventListener(event, value);
     } else if (key === "className") {
-      dom.className = value;
+      dom.className = Array.isArray(value) ? value.filter(Boolean).join(" ") : value;
     } else if (key === "dataset" && typeof value === "object") {
+      const previous = oldProps.dataset || {};
+      Object.keys(previous).forEach((k) => {
+        if (!(k in value)) delete dom.dataset[k];
+      });
       Object.keys(value).forEach((k) => (dom.dataset[k] = value[k]));
     } else if (
       key === "checked" ||
@@ -293,15 +315,41 @@ function updateProps(dom, oldProps = {}, newProps = {}) {
       dom.tabIndex = value;
     } else if (key === "htmlFor") {
       dom.setAttribute("for", String(value));
-    } else if (key !== "children" && value !== undefined && value !== null) {
+    } else if (
+      key !== "children" &&
+      key !== "key" &&
+      value !== undefined &&
+      value !== null
+    ) {
       dom.setAttribute(key, String(value));
     }
   });
 }
 
+function flattenChildren(children = []) {
+  const output = [];
+  const list = Array.isArray(children) ? children : [children];
+
+  list.forEach((child) => {
+    if (Array.isArray(child)) output.push(...flattenChildren(child));
+    else output.push(child);
+  });
+
+  return output;
+}
+
 function widgetKey(widget) {
   if (!widget || Array.isArray(widget) || typeof widget !== "object") return null;
   return widget.key ?? (widget.props && widget.props.key) ?? null;
+}
+
+function isReflectedDomProp(key) {
+  return (
+    key === "checked" ||
+    key === "value" ||
+    key === "disabled" ||
+    key === "selected"
+  );
 }
 
 function normalizeEventName(onName) {
@@ -312,5 +360,10 @@ function normalizeEventName(onName) {
 }
 
 function isEmptyWidget(widget) {
-  return widget === null || widget === undefined || widget === false;
+  return (
+    widget === null ||
+    widget === undefined ||
+    widget === false ||
+    widget === true
+  );
 }

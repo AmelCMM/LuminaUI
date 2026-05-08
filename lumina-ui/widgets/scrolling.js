@@ -7,6 +7,23 @@ import {
   px,
 } from "./utils.js";
 
+function dataKey(item) {
+  if (!item || typeof item !== "object") return null;
+  return item.id ?? item.key ?? null;
+}
+
+function withAutoKey(child, key) {
+  if (key == null) return child;
+  if (Array.isArray(child)) {
+    return child.map((entry, index) =>
+      withAutoKey(entry, `${key}:${index}`),
+    );
+  }
+  if (!child || typeof child !== "object" || !child.tag) return child;
+  if (child.key != null || child.props?.key != null) return child;
+  return { ...child, key };
+}
+
 export function SingleChildScrollView(
   propsOrChildren = {},
   maybeChildren = undefined,
@@ -56,9 +73,16 @@ export function ListView(propsOrChildren = {}, maybeChildren = undefined) {
     ? givenChildren
     : items.length
       ? items.flatMap((item, index) => {
-          const child = itemBuilder ? itemBuilder(item, index) : item;
+          const key = dataKey(item);
+          const child = withAutoKey(
+            itemBuilder ? itemBuilder(item, index) : item,
+            key,
+          );
           if (!separatorBuilder || index === items.length - 1) return [child];
-          return [child, separatorBuilder(item, index)];
+          return [
+            child,
+            withAutoKey(separatorBuilder(item, index), key == null ? null : `${key}:separator`),
+          ];
         })
       : empty
         ? [empty]
@@ -112,7 +136,9 @@ export function GridView(propsOrChildren = {}, maybeChildren = undefined) {
   const children = givenChildren.length
     ? givenChildren
     : items.length
-      ? items.map((item, index) => (itemBuilder ? itemBuilder(item, index) : item))
+      ? items.map((item, index) =>
+          withAutoKey(itemBuilder ? itemBuilder(item, index) : item, dataKey(item)),
+        )
       : empty
         ? [empty]
         : [];

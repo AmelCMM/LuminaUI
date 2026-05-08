@@ -589,13 +589,14 @@ export function SizedOverflowBox(
 
 export function Transform(propsOrChildren = {}, maybeChildren = undefined) {
   const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const angle = (value) => (typeof value === "number" ? `${value}deg` : value);
   const translate = props.translate
     ? `translate(${px(props.translate.x ?? 0)}, ${px(props.translate.y ?? 0)})`
     : "";
-  const rotate = props.rotate === undefined ? "" : `rotate(${props.rotate})`;
+  const rotate = props.rotate === undefined ? "" : `rotate(${angle(props.rotate)})`;
   const scale = props.scale === undefined ? "" : `scale(${props.scale})`;
   const skew = props.skew
-    ? `skew(${props.skew.x ?? 0}, ${props.skew.y ?? 0})`
+    ? `skew(${angle(props.skew.x ?? 0)}, ${angle(props.skew.y ?? 0)})`
     : "";
 
   return {

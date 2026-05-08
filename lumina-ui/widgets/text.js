@@ -1,4 +1,4 @@
-import { luminaTheme } from "./utils.js";
+import { isVNode, luminaTheme } from "./utils.js";
 
 export function Text(content = "", props = {}) {
   const {
@@ -41,10 +41,10 @@ export function Text(content = "", props = {}) {
   const children = [];
   const isNode = (value) => typeof Node !== "undefined" && value instanceof Node;
 
-  if (isNode(content)) children.push(content);
+  if (isNode(content) || isVNode(content)) children.push(content);
   else if (Array.isArray(content))
     content.forEach((c) =>
-      children.push(isNode(c) ? c : String(c ?? "")),
+      children.push(isNode(c) || isVNode(c) ? c : String(c ?? "")),
     );
   else children.push(String(content ?? ""));
 
