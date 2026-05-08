@@ -44,6 +44,9 @@ After publishing the package, install it in an app:
 npm install @chimuka_amel/lumina-ui
 ```
 
+If you are using Vite, Parcel, Webpack, or another bundler/dev server, you can
+import the package by name:
+
 ```js
 import { mount, Column, Text, Button } from "@chimuka_amel/lumina-ui";
 
@@ -55,6 +58,32 @@ function App() {
 }
 
 mount(App, document.getElementById("root"));
+```
+
+If you are serving plain files with `python3 -m http.server`, add an import map
+to `index.html` because browsers cannot resolve npm package names by
+themselves:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LuminaUI App</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "@chimuka_amel/lumina-ui": "./node_modules/@chimuka_amel/lumina-ui/lumina-ui.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
 ```
 
 Or clone this repository and open `index.html` in a browser.

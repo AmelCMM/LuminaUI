@@ -22,7 +22,7 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "check": "find . -name '*.js' -not -path './.git/*' -not -path './node_modules/*' -print -exec node --check {} \\;",
+    "check": "find . -name '*.js' -not -path '*/.git/*' -not -path '*/node_modules/*' -print -exec node --check {} \\;",
     "test": "npm run check && node scripts/smoke-test.mjs",
     "pack:dry": "npm pack --dry-run"
   },
