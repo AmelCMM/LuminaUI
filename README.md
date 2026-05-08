@@ -1472,17 +1472,12 @@ DOM nodes aligned when arrays change.
 
 `lumina-ui/app/App.js` demonstrates:
 
-- counters
-- todo list
-- theme toggle
-- layout widgets
-- display widgets
-- scrolling widgets
-- feedback widgets
-- navigation widgets
-- Flutter parity batch widgets such as `AspectRatio`, `Transform`, `RichText`,
-  `CustomScrollView`, `PageView`, `SliverAppBar`, `GestureDetector`, and
-  `Semantics`
+- a full ecommerce storefront
+- product grid, product detail dialog, filters, sorting, and search
+- cart drawer with quantity controls and dismissible rows
+- checkout form with shipping and payment choices
+- snackbars, dialogs, navigation, scrolling, forms, display widgets, and layout
+  primitives working together
 
 Use it as a living playground for new widgets.
 
