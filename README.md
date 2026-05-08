@@ -41,11 +41,11 @@ build small apps and understand how the framework is intended to grow.
 After publishing the package, install it in an app:
 
 ```bash
-npm install @neuralumina/lumina-ui
+npm install @chimuka_amel/lumina-ui
 ```
 
 ```js
-import { mount, Column, Text, Button } from "@neuralumina/lumina-ui";
+import { mount, Column, Text, Button } from "@chimuka_amel/lumina-ui";
 
 function App() {
   return Column({ gap: 12, padding: 16 }, [
@@ -240,17 +240,17 @@ import {
   Column,
   Text,
   Button,
-} from "@neuralumina/lumina-ui";
+} from "@chimuka_amel/lumina-ui";
 ```
 
 Package subpath imports are available for smaller, explicit imports:
 
 ```js
-import { mount } from "@neuralumina/lumina-ui/core/renderer";
-import { createState } from "@neuralumina/lumina-ui/core/state";
-import { Column, Row } from "@neuralumina/lumina-ui/widgets/layout";
-import { Button } from "@neuralumina/lumina-ui/widgets/controls";
-import { Text } from "@neuralumina/lumina-ui/widgets/text";
+import { mount } from "@chimuka_amel/lumina-ui/core/renderer";
+import { createState } from "@chimuka_amel/lumina-ui/core/state";
+import { Column, Row } from "@chimuka_amel/lumina-ui/widgets/layout";
+import { Button } from "@chimuka_amel/lumina-ui/widgets/controls";
+import { Text } from "@chimuka_amel/lumina-ui/widgets/text";
 ```
 
 When using this repository directly in the browser, import from local files:
