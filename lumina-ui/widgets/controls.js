@@ -265,6 +265,7 @@ export function Switch({
     tag: "button",
     props: {
       role: "switch",
+      type: props.type || "button",
       "aria-checked": !!value,
       "aria-label": ariaLabel || "toggle",
       tabIndex: 0,

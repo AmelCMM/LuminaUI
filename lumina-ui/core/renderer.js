@@ -95,12 +95,12 @@ function normalizeVNode(v) {
   return { tag: "text", children: [String(v)] };
 }
 
-function patchWidget(parent, oldWidget, newWidget, index = 0) {
+function patchWidget(parent, oldWidget, newWidget, index = 0, currentDom = null) {
   // Normalize to vnodes
   const oldV = normalizeVNode(oldWidget);
   const newV = normalizeVNode(newWidget);
 
-  const dom = parent.childNodes[index];
+  const dom = currentDom || parent.childNodes[index];
   if (!dom) return;
 
   // Replace if different tag or key
@@ -116,12 +116,12 @@ function patchWidget(parent, oldWidget, newWidget, index = 0) {
     if (oldKey !== newKey || oldTag !== newTag) {
       const newDom = renderWidget(newWidget);
       parent.replaceChild(newDom, dom);
-      return;
+      return newDom;
     }
   } else if (oldTag !== newTag) {
     const newDom = renderWidget(newWidget);
     parent.replaceChild(newDom, dom);
-    return;
+    return newDom;
   }
 
   // Text node
@@ -140,9 +140,11 @@ function patchWidget(parent, oldWidget, newWidget, index = 0) {
     ) {
       dom.textContent = nextText;
     } else if (dom && dom.nodeType !== Node.TEXT_NODE) {
-      parent.replaceChild(renderWidget(newWidget), dom);
+      const newDom = renderWidget(newWidget);
+      parent.replaceChild(newDom, dom);
+      return newDom;
     }
-    return;
+    return dom;
   }
 
   // Update props
@@ -155,57 +157,47 @@ function patchWidget(parent, oldWidget, newWidget, index = 0) {
   const newChildren = newV.children || [];
 
   // Build key -> index map for old children
-  const keyed = {};
+  const keyed = new Map();
   oldChildren.forEach((c, i) => {
-    const k = (c && c.key) ?? (c && c.props && c.props.key);
-    if (k != null) keyed[k] = { vnode: c, index: i };
+    const k = widgetKey(c);
+    const node = dom.childNodes[i];
+    if (k != null && node) keyed.set(k, { vnode: c, node });
   });
 
   // If any new child has a key, do keyed reconciliation
-  const anyKeyed = newChildren.some(
-    (c) => c && (c.key != null || (c.props && c.props.key != null)),
-  );
+  const anyKeyed = newChildren.some((c) => widgetKey(c) != null);
   if (anyKeyed) {
-    // Create a temporary list of DOM nodes for comparison
-    const childNodes = Array.from(dom.childNodes);
+    const usedKeys = new Set();
+
     newChildren.forEach((nc, i) => {
-      const nk = (nc && nc.key) ?? (nc && nc.props && nc.props.key);
-      if (nk != null && keyed[nk]) {
-        // patch the DOM at the position of the matched old index
-        const oldIndex = keyed[nk].index;
-        patchWidget(dom, oldChildren[oldIndex], nc, oldIndex);
-        // move DOM node to correct position if needed
-        const nodeToMove = childNodes[oldIndex];
-        const targetNode = dom.childNodes[i];
-        if (nodeToMove && nodeToMove !== targetNode) {
-          dom.insertBefore(nodeToMove, targetNode || null);
-        }
+      const nk = widgetKey(nc);
+      let node;
+
+      if (nk != null && keyed.has(nk)) {
+        const oldEntry = keyed.get(nk);
+        usedKeys.add(nk);
+        node = patchWidget(dom, oldEntry.vnode, nc, 0, oldEntry.node);
       } else {
-        // new node: render and insert at position i
-        const newDom = renderWidget(nc);
-        const reference = dom.childNodes[i] || null;
-        dom.insertBefore(newDom, reference);
+        node = renderWidget(nc);
+      }
+
+      const targetNode = dom.childNodes[i] || null;
+      if (node && node !== targetNode) {
+        dom.insertBefore(node, targetNode);
       }
     });
 
-    // Remove old nodes not present in newChildren keys
-    oldChildren.forEach((oc) => {
-      const ok = (oc && oc.key) ?? (oc && oc.props && oc.props.key);
-      if (
-        ok == null ||
-        !newChildren.some(
-          (nc) => (nc && (nc.key ?? (nc.props && nc.props.key))) === ok,
-        )
-      ) {
-        // find its DOM node and remove
-        const idx = Array.from(dom.childNodes).findIndex(
-          (n) => n._vnodeKey === ok,
-        );
-        if (idx >= 0) dom.removeChild(dom.childNodes[idx]);
+    keyed.forEach((entry, key) => {
+      if (!usedKeys.has(key) && entry.node.parentNode === dom) {
+        dom.removeChild(entry.node);
       }
     });
 
-    return;
+    while (dom.childNodes.length > newChildren.length) {
+      dom.removeChild(dom.lastChild);
+    }
+
+    return dom;
   }
 
   // Fallback index-based reconciliation
@@ -227,6 +219,8 @@ function patchWidget(parent, oldWidget, newWidget, index = 0) {
       patchWidget(dom, oldC, newC, i);
     }
   }
+
+  return dom;
 }
 
 function updateProps(dom, oldProps = {}, newProps = {}) {
@@ -235,8 +229,13 @@ function updateProps(dom, oldProps = {}, newProps = {}) {
   // Remove old event listeners and attributes not in newProps
   Object.keys(oldProps).forEach((key) => {
     const oldVal = oldProps[key];
-    if (key.startsWith("on") && typeof oldVal === "function") {
-      const event = key.slice(2).toLowerCase();
+    const nextVal = newProps[key];
+    if (
+      key.startsWith("on") &&
+      typeof oldVal === "function" &&
+      oldVal !== nextVal
+    ) {
+      const event = normalizeEventName(key);
       dom.removeEventListener(event, oldVal);
     }
     if (!(key in newProps) || newProps[key] === undefined || newProps[key] === null) {
@@ -273,7 +272,7 @@ function updateProps(dom, oldProps = {}, newProps = {}) {
       });
       Object.assign(dom.style, value);
     } else if (key.startsWith("on") && typeof value === "function") {
-      const event = key.slice(2).toLowerCase();
+      const event = normalizeEventName(key);
       dom.addEventListener(event, value);
     } else if (key === "className") {
       dom.className = value;
@@ -298,6 +297,18 @@ function updateProps(dom, oldProps = {}, newProps = {}) {
       dom.setAttribute(key, String(value));
     }
   });
+}
+
+function widgetKey(widget) {
+  if (!widget || Array.isArray(widget) || typeof widget !== "object") return null;
+  return widget.key ?? (widget.props && widget.props.key) ?? null;
+}
+
+function normalizeEventName(onName) {
+  const name = onName.slice(2);
+  const lower = name.toLowerCase();
+  if (lower === "doubleclick" || lower === "dblclick") return "dblclick";
+  return lower;
 }
 
 function isEmptyWidget(widget) {

@@ -518,6 +518,7 @@ function ProductAdminPanel() {
       ]),
       Divider({ color: theme.border, margin: 0 }),
       ListView({
+        key: "admin-product-list",
         items: getProducts(),
         itemBuilder: ProductAdminRow,
       }),
@@ -527,71 +528,74 @@ function ProductAdminPanel() {
 
 function ProductAdminRow(product) {
   const low = product.stock <= product.lowStockThreshold;
-  return [
-    Padding({ padding: 14 }, [
-      Row({ gap: 12, style: { alignItems: "center", flexWrap: "wrap" } }, [
-        Container(
-          {
-            width: 58,
-            height: 58,
-            decoration: { borderRadius: 10 },
-            style: { overflow: "hidden", flexShrink: 0 },
-          },
-          [Image({ src: product.image, alt: product.name, width: 58, height: 58 })],
-        ),
-        Expanded([
-          Column({ gap: 5 }, [
-            Row({ gap: 8, style: { flexWrap: "wrap", alignItems: "center" } }, [
-              Text(product.name, { color: theme.text, weight: 900 }),
-              StatusPill(product.active ? "Live" : "Hidden", product.active ? theme.accent : theme.muted),
-              low ? StatusPill("Low stock", theme.warning) : null,
+  return Container(
+    { key: product.id },
+    [
+      Padding({ padding: 14 }, [
+        Row({ gap: 12, style: { alignItems: "center", flexWrap: "wrap" } }, [
+          Container(
+            {
+              width: 58,
+              height: 58,
+              decoration: { borderRadius: 10 },
+              style: { overflow: "hidden", flexShrink: 0 },
+            },
+            [Image({ src: product.image, alt: product.name, width: 58, height: 58 })],
+          ),
+          Expanded([
+            Column({ gap: 5 }, [
+              Row({ gap: 8, style: { flexWrap: "wrap", alignItems: "center" } }, [
+                Text(product.name, { color: theme.text, weight: 900 }),
+                StatusPill(product.active ? "Live" : "Hidden", product.active ? theme.accent : theme.muted),
+                low ? StatusPill("Low stock", theme.warning) : null,
+              ]),
+              Caption(
+                { color: theme.muted },
+                `${product.sku} · ${product.category} · ${formatMoney(product.price)} · ${product.vendor}`,
+              ),
             ]),
-            Caption(
-              { color: theme.muted },
-              `${product.sku} · ${product.category} · ${formatMoney(product.price)} · ${product.vendor}`,
-            ),
           ]),
-        ]),
-        Row({ gap: 6, style: { alignItems: "center" } }, [
+          Row({ gap: 6, style: { alignItems: "center" } }, [
+            Button({
+              text: "-",
+              variant: "secondary",
+              onClick: () => adjustProductStock(product.id, -1),
+              style: { padding: "4px 9px", borderColor: theme.border },
+            }),
+            Text(String(product.stock), {
+              color: low ? theme.warning : theme.text,
+              weight: 900,
+              style: { minWidth: "26px", textAlign: "center" },
+            }),
+            Button({
+              text: "+",
+              variant: "secondary",
+              onClick: () => adjustProductStock(product.id, 1),
+              style: { padding: "4px 9px", borderColor: theme.border },
+            }),
+          ]),
+          Switch({
+            value: product.active,
+            ariaLabel: `${product.name} visibility`,
+            onChange: () => toggleProductActive(product.id),
+          }),
           Button({
-            text: "-",
+            text: "Edit",
             variant: "secondary",
-            onClick: () => adjustProductStock(product.id, -1),
-            style: { padding: "4px 9px", borderColor: theme.border },
-          }),
-          Text(String(product.stock), {
-            color: low ? theme.warning : theme.text,
-            weight: 900,
-            style: { minWidth: "26px", textAlign: "center" },
+            onClick: () => startEditProduct(product.id),
+            style: { borderColor: theme.border, color: theme.text },
           }),
           Button({
-            text: "+",
-            variant: "secondary",
-            onClick: () => adjustProductStock(product.id, 1),
-            style: { padding: "4px 9px", borderColor: theme.border },
+            text: "Delete",
+            variant: "text",
+            onClick: () => deleteProduct(product.id),
+            style: { color: theme.danger },
           }),
         ]),
-        Switch({
-          value: product.active,
-          ariaLabel: `${product.name} visibility`,
-          onChange: () => toggleProductActive(product.id),
-        }),
-        Button({
-          text: "Edit",
-          variant: "secondary",
-          onClick: () => startEditProduct(product.id),
-          style: { borderColor: theme.border, color: theme.text },
-        }),
-        Button({
-          text: "Delete",
-          variant: "text",
-          onClick: () => deleteProduct(product.id),
-          style: { color: theme.danger },
-        }),
       ]),
-    ]),
-    Divider({ color: theme.border, margin: 0 }),
-  ];
+      Divider({ color: theme.border, margin: 0 }),
+    ],
+  );
 }
 
 function AdminProductForm() {
@@ -701,6 +705,7 @@ function OrderAdminPanel() {
       ]),
       Divider({ color: theme.border, margin: 0 }),
       ListView({
+        key: "admin-order-list",
         items: getOrders(),
         itemBuilder: OrderAdminCard,
       }),
@@ -709,36 +714,39 @@ function OrderAdminPanel() {
 }
 
 function OrderAdminCard(order) {
-  return [
-    Padding({ padding: 14 }, [
-      Column({ gap: 10 }, [
-        Row({ mainAxisAlignment: "spaceBetween", gap: 10 }, [
-          Column({ gap: 2 }, [
-            Text(order.id, { color: theme.text, weight: 900 }),
-            Caption({ color: theme.muted }, `${order.customer.name} · ${order.placedAt}`),
+  return Container(
+    { key: order.id },
+    [
+      Padding({ padding: 14 }, [
+        Column({ gap: 10 }, [
+          Row({ mainAxisAlignment: "spaceBetween", gap: 10 }, [
+            Column({ gap: 2 }, [
+              Text(order.id, { color: theme.text, weight: 900 }),
+              Caption({ color: theme.muted }, `${order.customer.name} · ${order.placedAt}`),
+            ]),
+            StatusPill(order.status, statusColor(order.status)),
           ]),
-          StatusPill(order.status, statusColor(order.status)),
-        ]),
-        Caption({ color: theme.muted }, orderItems(order)),
-        Row({ mainAxisAlignment: "spaceBetween", gap: 10, style: { alignItems: "center" } }, [
-          Text(formatMoney(order.total), { color: theme.primary, weight: 900 }),
-          Dropdown({
-            value: order.status,
-            onChange: (status) => updateOrderStatus(order.id, status),
-            options: [
-              { label: "Processing", value: "processing" },
-              { label: "Packed", value: "packed" },
-              { label: "Shipped", value: "shipped" },
-              { label: "Delivered", value: "delivered" },
-              { label: "Cancelled", value: "cancelled" },
-            ],
-            style: { width: 150, borderColor: theme.border },
-          }),
+          Caption({ color: theme.muted }, orderItems(order)),
+          Row({ mainAxisAlignment: "spaceBetween", gap: 10, style: { alignItems: "center" } }, [
+            Text(formatMoney(order.total), { color: theme.primary, weight: 900 }),
+            Dropdown({
+              value: order.status,
+              onChange: (status) => updateOrderStatus(order.id, status),
+              options: [
+                { label: "Processing", value: "processing" },
+                { label: "Packed", value: "packed" },
+                { label: "Shipped", value: "shipped" },
+                { label: "Delivered", value: "delivered" },
+                { label: "Cancelled", value: "cancelled" },
+              ],
+              style: { width: 150, borderColor: theme.border },
+            }),
+          ]),
         ]),
       ]),
-    ]),
-    Divider({ color: theme.border, margin: 0 }),
-  ];
+      Divider({ color: theme.border, margin: 0 }),
+    ],
+  );
 }
 
 function orderItems(order) {
