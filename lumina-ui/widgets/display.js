@@ -268,3 +268,169 @@ export function ClipRRect(propsOrChildren = {}, maybeChildren = undefined) {
     key: props.key,
   };
 }
+
+export function ClipOval(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+
+  return {
+    tag: "div",
+    props: {
+      ...omitProps(props),
+      style: cleanStyle({
+        overflow: "hidden",
+        borderRadius: "50%",
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function ClipRect(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+
+  return {
+    tag: "div",
+    props: {
+      ...omitProps(props),
+      style: cleanStyle({
+        overflow: "hidden",
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function ClipPath(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+
+  return {
+    tag: "div",
+    props: {
+      ...omitProps(props, ["path", "clipPath"]),
+      style: cleanStyle({
+        overflow: "hidden",
+        clipPath: props.clipPath || props.path,
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function FittedBox(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const fitMap = {
+    contain: "contain",
+    cover: "cover",
+    fill: "fill",
+    fitWidth: "contain",
+    fitHeight: "contain",
+    none: "none",
+    scaleDown: "scale-down",
+  };
+
+  return {
+    tag: "div",
+    props: {
+      ...omitProps(props, ["fit", "alignment"]),
+      style: cleanStyle({
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+        width: px(props.width, "100%"),
+        height: px(props.height, "100%"),
+        ...props.style,
+      }),
+    },
+    children: children.map((child) =>
+      child && typeof child === "object" && child.tag
+        ? {
+            ...child,
+            props: {
+              ...(child.props || {}),
+              style: {
+                objectFit: fitMap[props.fit] || props.fit || "contain",
+                maxWidth: "100%",
+                maxHeight: "100%",
+                ...(child.props?.style || {}),
+              },
+            },
+          }
+        : child,
+    ),
+    key: props.key,
+  };
+}
+
+export function Opacity(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+
+  return {
+    tag: "div",
+    props: {
+      ...omitProps(props, ["opacity"]),
+      style: cleanStyle({
+        opacity: props.opacity ?? 1,
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function PhysicalModel(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const elevation = props.elevation ?? 1;
+
+  return {
+    tag: "div",
+    props: {
+      ...omitProps(props, [
+        "elevation",
+        "color",
+        "shadowColor",
+        "borderRadius",
+      ]),
+      style: cleanStyle({
+        backgroundColor: props.color || "#ffffff",
+        borderRadius: px(props.borderRadius ?? 8),
+        boxShadow: `0 ${elevation}px ${elevation * 4}px ${
+          props.shadowColor || "rgba(15, 23, 42, 0.18)"
+        }`,
+        overflow: "hidden",
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function ShaderMask(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+
+  return {
+    tag: "div",
+    props: {
+      ...omitProps(props, ["shader", "blendMode"]),
+      style: cleanStyle({
+        display: "inline-block",
+        backgroundImage: props.shader,
+        WebkitBackgroundClip: props.blendMode === "text" ? "text" : undefined,
+        backgroundClip: props.blendMode === "text" ? "text" : undefined,
+        WebkitTextFillColor:
+          props.blendMode === "text" ? "transparent" : undefined,
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}

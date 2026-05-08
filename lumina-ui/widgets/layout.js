@@ -351,3 +351,269 @@ export function Card(propsOrChildren = {}, maybeChildren = undefined) {
     children,
   );
 }
+
+export function AspectRatio(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const ratio = props.aspectRatio ?? props.ratio ?? 1;
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props, ["aspectRatio", "ratio"]),
+      style: cleanStyle({
+        aspectRatio: String(ratio),
+        width: px(props.width, "100%"),
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function Baseline(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props, ["baseline", "baselineType"]),
+      style: cleanStyle({
+        display: "inline-flex",
+        alignItems: "baseline",
+        lineHeight: px(props.baseline) || undefined,
+        verticalAlign: props.baselineType || "baseline",
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function ConstrainedBox(
+  propsOrChildren = {},
+  maybeChildren = undefined,
+) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const constraints = props.constraints || {};
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props, ["constraints"]),
+      style: cleanStyle({
+        minWidth: px(props.minWidth ?? constraints.minWidth),
+        minHeight: px(props.minHeight ?? constraints.minHeight),
+        maxWidth: px(props.maxWidth ?? constraints.maxWidth),
+        maxHeight: px(props.maxHeight ?? constraints.maxHeight),
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function DecoratedBox(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props, ["position"]),
+      style: cleanStyle({
+        ...decorationStyle(props.decoration),
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function FractionallySizedBox(
+  propsOrChildren = {},
+  maybeChildren = undefined,
+) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const align = alignmentStyle(props.alignment || "center");
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props, ["widthFactor", "heightFactor"]),
+      style: cleanStyle({
+        display: "flex",
+        ...align,
+        width:
+          props.widthFactor === undefined
+            ? undefined
+            : `${props.widthFactor * 100}%`,
+        height:
+          props.heightFactor === undefined
+            ? undefined
+            : `${props.heightFactor * 100}%`,
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function LayoutBuilder(props = {}) {
+  const constraints = props.constraints || {};
+  const child =
+    typeof props.builder === "function"
+      ? props.builder(constraints)
+      : props.child;
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props, ["builder", "constraints"]),
+      style: cleanStyle({
+        width: "100%",
+        ...props.style,
+      }),
+    },
+    children: child === undefined ? [] : [child],
+    key: props.key,
+  };
+}
+
+export function LimitedBox(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props),
+      style: cleanStyle({
+        maxWidth: px(props.maxWidth),
+        maxHeight: px(props.maxHeight),
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function Offstage(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props, ["offstage"]),
+      "aria-hidden": props.offstage ? "true" : undefined,
+      style: cleanStyle({
+        display: props.offstage ? "none" : undefined,
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function OverflowBox(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props),
+      style: cleanStyle({
+        overflow: "visible",
+        minWidth: px(props.minWidth),
+        minHeight: px(props.minHeight),
+        maxWidth: px(props.maxWidth),
+        maxHeight: px(props.maxHeight),
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function RotatedBox(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const turns = props.quarterTurns ?? 0;
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props, ["quarterTurns"]),
+      style: cleanStyle({
+        display: "inline-block",
+        transform: `rotate(${turns * 90}deg)`,
+        transformOrigin: "center",
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function SizedOverflowBox(
+  propsOrChildren = {},
+  maybeChildren = undefined,
+) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props, ["size"]),
+      style: cleanStyle({
+        width: px(props.width ?? props.size?.width),
+        height: px(props.height ?? props.size?.height),
+        overflow: "visible",
+        position: "relative",
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}
+
+export function Transform(propsOrChildren = {}, maybeChildren = undefined) {
+  const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
+  const translate = props.translate
+    ? `translate(${px(props.translate.x ?? 0)}, ${px(props.translate.y ?? 0)})`
+    : "";
+  const rotate = props.rotate === undefined ? "" : `rotate(${props.rotate})`;
+  const scale = props.scale === undefined ? "" : `scale(${props.scale})`;
+  const skew = props.skew
+    ? `skew(${props.skew.x ?? 0}, ${props.skew.y ?? 0})`
+    : "";
+
+  return {
+    tag: "div",
+    props: {
+      ...layoutProps(props, [
+        "transform",
+        "translate",
+        "rotate",
+        "scale",
+        "skew",
+        "origin",
+      ]),
+      style: cleanStyle({
+        display: "inline-block",
+        transform:
+          props.transform || [translate, rotate, scale, skew].filter(Boolean).join(" "),
+        transformOrigin: props.origin || "center",
+        ...props.style,
+      }),
+    },
+    children,
+    key: props.key,
+  };
+}

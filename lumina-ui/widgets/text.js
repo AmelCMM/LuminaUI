@@ -63,3 +63,55 @@ export function Caption(props = {}, children = []) {
   const content = Array.isArray(children) ? children : [children];
   return Text(content, { size: 12, color: "#666", ...props });
 }
+
+export function DefaultTextStyle(props = {}, children = []) {
+  const content = Array.isArray(children) ? children : [children];
+  const {
+    size,
+    weight,
+    color,
+    align,
+    lineHeight,
+    style = {},
+    ...rest
+  } = props;
+
+  return {
+    tag: "div",
+    props: {
+      ...rest,
+      style: {
+        fontSize: typeof size === "number" ? `${size}px` : size,
+        fontWeight: weight,
+        color,
+        textAlign: align,
+        lineHeight,
+        ...style,
+      },
+    },
+    children: content,
+    key: props.key,
+  };
+}
+
+export function RichText({ spans = [], as = "span", style = {}, ...props } = {}) {
+  return {
+    tag: as,
+    props: {
+      ...props,
+      style,
+    },
+    children: spans.map((span, index) => ({
+      tag: span.as || "span",
+      props: {
+        key: span.key ?? index,
+        style: span.style || {},
+      },
+      children: Array.isArray(span.children)
+        ? span.children
+        : [span.text ?? ""],
+      key: span.key ?? index,
+    })),
+    key: props.key,
+  };
+}

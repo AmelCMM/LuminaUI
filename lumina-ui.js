@@ -27,6 +27,18 @@ export {
   Positioned,
   Divider,
   Card,
+  AspectRatio,
+  Baseline,
+  ConstrainedBox,
+  DecoratedBox,
+  FractionallySizedBox,
+  LayoutBuilder,
+  LimitedBox,
+  Offstage,
+  OverflowBox,
+  RotatedBox,
+  SizedOverflowBox,
+  Transform,
 } from "./lumina-ui/widgets/layout.js";
 export {
   Button,
@@ -42,11 +54,26 @@ export {
   Icon,
   Image,
   Placeholder,
+  ClipOval,
+  ClipPath,
+  ClipRect,
+  FittedBox,
+  Opacity,
+  PhysicalModel,
+  ShaderMask,
 } from "./lumina-ui/widgets/display.js";
 export {
+  CustomScrollView,
   GridView,
   ListView,
+  NestedScrollView,
+  PageView,
   SingleChildScrollView,
+  SliverAppBar,
+  SliverGrid,
+  SliverList,
+  SliverPadding,
+  SliverToBoxAdapter,
 } from "./lumina-ui/widgets/scrolling.js";
 export {
   AlertDialog,
@@ -82,7 +109,25 @@ export {
   AnimatedSlide,
   AnimatedSwitcher,
 } from "./lumina-ui/widgets/animation.js";
-export { Text, Heading, Caption } from "./lumina-ui/widgets/text.js";
+export {
+  Text,
+  Heading,
+  Caption,
+  DefaultTextStyle,
+  RichText,
+} from "./lumina-ui/widgets/text.js";
+export {
+  Semantics,
+  ExcludeSemantics,
+} from "./lumina-ui/widgets/accessibility.js";
+export {
+  AbsorbPointer,
+  Dismissible,
+  Draggable,
+  DragTarget,
+  GestureDetector,
+  IgnorePointer,
+} from "./lumina-ui/widgets/interaction.js";
 
 export { App } from "./lumina-ui/app/App.js";
 

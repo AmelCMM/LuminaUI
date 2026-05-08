@@ -1,9 +1,11 @@
 import {
   Align,
+  AspectRatio,
   Card,
   Center,
   Column,
   Container,
+  ConstrainedBox,
   Divider,
   Expanded,
   Padding,
@@ -12,6 +14,7 @@ import {
   SizedBox,
   Spacer,
   Stack,
+  Transform,
   Wrap,
 } from "../widgets/layout.js";
 import { Button, Input, Switch } from "../widgets/controls.js";
@@ -19,8 +22,11 @@ import {
   Badge,
   CircleAvatar,
   ClipRRect,
+  Opacity,
+  PhysicalModel,
   Icon,
   Placeholder,
+  ShaderMask,
 } from "../widgets/display.js";
 import {
   CircularProgressIndicator,
@@ -38,11 +44,19 @@ import {
   TabBarView,
 } from "../widgets/navigation.js";
 import {
+  CustomScrollView,
   GridView,
   ListView,
+  PageView,
   SingleChildScrollView,
+  SliverAppBar,
+  SliverList,
+  SliverPadding,
+  SliverToBoxAdapter,
 } from "../widgets/scrolling.js";
-import { Caption, Heading, Text } from "../widgets/text.js";
+import { Semantics } from "../widgets/accessibility.js";
+import { GestureDetector } from "../widgets/interaction.js";
+import { Caption, DefaultTextStyle, Heading, RichText, Text } from "../widgets/text.js";
 import { createState } from "../core/state.js";
 
 const [getDarkMode, setDarkMode, subscribeDarkMode] = createState(false);
@@ -55,6 +69,7 @@ const [getSnackOpen, setSnackOpen, subscribeSnackOpen] = createState(false);
 const [getActiveTab, setActiveTab, subscribeActiveTab] = createState("overview");
 const [getNavPage, setNavPage, subscribeNavPage] = createState("home");
 const [getDrawerOpen, setDrawerOpen, subscribeDrawerOpen] = createState(false);
+const [getGestureCount, setGestureCount, subscribeGestureCount] = createState(0);
 
 const subscribedUpdates = new WeakSet();
 
@@ -74,6 +89,7 @@ function bindState(forceUpdate) {
     subscribeActiveTab,
     subscribeNavPage,
     subscribeDrawerOpen,
+    subscribeGestureCount,
   ].forEach((subscribe) => subscribe(forceUpdate));
 
   subscribedUpdates.add(forceUpdate);
@@ -723,6 +739,195 @@ function navigationPanel({ title, body, theme }) {
   );
 }
 
+function FlutterMissingGallery(theme) {
+  return Card(
+    {
+      elevation: 1,
+      style: {
+        backgroundColor: theme.surface,
+        borderColor: theme.border,
+        width: "min(100%, 560px)",
+      },
+    },
+    [
+      Column({ gap: 14 }, [
+        Heading(
+          { level: 2, style: { color: theme.text } },
+          "Flutter Parity Batch",
+        ),
+        RichText({
+          spans: [
+            { text: "RichText ", style: { color: theme.primary, fontWeight: 800 } },
+            { text: "and " },
+            { text: "DefaultTextStyle", style: { color: theme.accent } },
+          ],
+        }),
+        DefaultTextStyle(
+          { color: theme.muted, size: 12 },
+          [
+            Text(
+              "This section demos newly added layout, visual, scrolling, interaction, and accessibility wrappers.",
+            ),
+          ],
+        ),
+        Row({ gap: 12, style: { alignItems: "stretch" } }, [
+          Expanded([
+            AspectRatio(
+              {
+                aspectRatio: "16 / 9",
+                style: {
+                  backgroundColor: theme.subtle,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                },
+              },
+              [
+                PhysicalModel(
+                  {
+                    elevation: 2,
+                    color: theme.surface,
+                    borderRadius: 8,
+                    style: { height: "100%" },
+                  },
+                  [
+                    Transform(
+                      {
+                        rotate: "-4deg",
+                        style: {
+                          height: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        },
+                      },
+                      [
+                        ShaderMask(
+                          {
+                            shader: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
+                            blendMode: "text",
+                          },
+                          [
+                            Text("Transform", {
+                              weight: 900,
+                              size: 20,
+                            }),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ]),
+          Expanded([
+            ConstrainedBox(
+              {
+                minHeight: 132,
+                maxHeight: 132,
+                style: {
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                },
+              },
+              [
+                PageView({
+                  pages: [
+                    Center([
+                      Text("PageView 1", { color: theme.text, weight: 800 }),
+                    ]),
+                    Center([
+                      Text("PageView 2", { color: theme.text, weight: 800 }),
+                    ]),
+                  ],
+                  style: { height: "132px" },
+                }),
+              ],
+            ),
+          ]),
+        ]),
+        CustomScrollView(
+          {
+            style: {
+              maxHeight: "180px",
+              border: `1px solid ${theme.border}`,
+              borderRadius: "8px",
+              backgroundColor: theme.subtle,
+            },
+          },
+          [
+            SliverAppBar({
+              title: "Sliver-style list",
+              pinned: true,
+              style: {
+                backgroundColor: theme.surface,
+                color: theme.text,
+                borderBottomColor: theme.border,
+              },
+            }),
+            SliverPadding({ padding: 10 }, [
+              SliverList({
+                items: ["SliverToBoxAdapter", "SliverList", "SliverPadding"],
+                gap: 8,
+                itemBuilder: (item) =>
+                  SliverToBoxAdapter({
+                    key: item,
+                    child: Container(
+                      {
+                        padding: 10,
+                        decoration: {
+                          color: theme.surface,
+                          borderRadius: 6,
+                        },
+                      },
+                      [Text(item, { color: theme.text })],
+                    ),
+                  }),
+              }),
+            ]),
+          ],
+        ),
+        Row({ gap: 12 }, [
+          GestureDetector(
+            {
+              onTap: () => setGestureCount((value) => value + 1),
+              style: {
+                flex: 1,
+                padding: "10px",
+                borderRadius: "8px",
+                backgroundColor: theme.chip,
+                textAlign: "center",
+              },
+            },
+            [
+              Semantics({ label: "Gesture demo button", role: "button" }, [
+                Text(`GestureDetector taps: ${getGestureCount()}`, {
+                  color: theme.text,
+                  weight: 700,
+                }),
+              ]),
+            ],
+          ),
+          Opacity({ opacity: 0.64 }, [
+            Container(
+              {
+                padding: 10,
+                decoration: {
+                  color: theme.warning,
+                  borderRadius: 8,
+                },
+              },
+              [Text("Opacity", { color: "#111827", weight: 800 })],
+            ),
+          ]),
+        ]),
+      ]),
+    ],
+  );
+}
+
 function AppOverlays(theme) {
   return [
     Dialog(
@@ -888,6 +1093,7 @@ export function App(forceUpdate) {
             ScrollingGallery(theme),
             FeedbackGallery(theme),
             NavigationGallery(theme),
+            FlutterMissingGallery(theme),
           ]),
           ...AppOverlays(theme),
         ]),

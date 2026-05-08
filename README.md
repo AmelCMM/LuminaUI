@@ -84,10 +84,12 @@ LuminaUI/
     │   └── state.js
     └── widgets/
         ├── animation.js
+        ├── accessibility.js
         ├── controls.js
         ├── display.js
         ├── feedback.js
         ├── forms.js
+        ├── interaction.js
         ├── layout.js
         ├── navigation.js
         ├── scrolling.js
@@ -339,6 +341,18 @@ import {
   Positioned,
   Divider,
   Card,
+  AspectRatio,
+  Baseline,
+  ConstrainedBox,
+  DecoratedBox,
+  FractionallySizedBox,
+  LayoutBuilder,
+  LimitedBox,
+  Offstage,
+  OverflowBox,
+  RotatedBox,
+  SizedOverflowBox,
+  Transform,
 } from "./lumina-ui.js";
 ```
 
@@ -506,12 +520,47 @@ Card({ elevation: 2, padding: 16 }, [
 ])
 ```
 
+#### Additional Flutter-inspired layout wrappers
+
+These widgets map Flutter layout ideas onto browser CSS:
+
+- `AspectRatio({ aspectRatio })`: uses CSS `aspect-ratio`.
+- `Baseline({ baseline })`: aligns inline children on a text baseline.
+- `ConstrainedBox({ minWidth, maxWidth, minHeight, maxHeight })`: applies CSS constraints.
+- `DecoratedBox({ decoration })`: paints background, border, radius, shadow, or gradient.
+- `FractionallySizedBox({ widthFactor, heightFactor })`: sizes by parent percentage.
+- `LayoutBuilder({ constraints, builder })`: calls a builder with declared constraints.
+- `LimitedBox({ maxWidth, maxHeight })`: applies max constraints.
+- `Offstage({ offstage })`: hides children with `display: none`.
+- `OverflowBox(...)`: allows visible overflow.
+- `RotatedBox({ quarterTurns })`: rotates in 90-degree increments.
+- `SizedOverflowBox({ width, height })`: fixed-size overflow wrapper.
+- `Transform({ translate, rotate, scale, skew })`: applies CSS transforms.
+
+```js
+AspectRatio({ aspectRatio: "16 / 9" }, [
+  Container({ color: "#eef2ff" }, [
+    Center([Text("16:9")]),
+  ]),
+])
+
+Transform({ rotate: "-4deg", scale: 1.1 }, [
+  Card([Text("Transformed")]),
+])
+```
+
 ### Text Widgets
 
 Import:
 
 ```js
-import { Text, Heading, Caption } from "./lumina-ui.js";
+import {
+  Text,
+  Heading,
+  Caption,
+  DefaultTextStyle,
+  RichText,
+} from "./lumina-ui.js";
 ```
 
 #### `Text(content, props)`
@@ -542,6 +591,29 @@ Heading({ level: 2 }, "Section title")
 
 ```js
 Caption({ color: "#6b7280" }, "Small helper text")
+```
+
+#### `DefaultTextStyle(props, children)`
+
+Applies inherited CSS text styles to descendants.
+
+```js
+DefaultTextStyle({ color: "#6b7280", size: 14 }, [
+  Text("This inherits the default text color"),
+])
+```
+
+#### `RichText(props)`
+
+Renders multiple inline spans with different styles.
+
+```js
+RichText({
+  spans: [
+    { text: "Rich ", style: { fontWeight: 800 } },
+    { text: "text", style: { color: "#2563eb" } },
+  ],
+})
 ```
 
 ### Controls
@@ -622,6 +694,13 @@ import {
   Badge,
   Placeholder,
   ClipRRect,
+  ClipOval,
+  ClipRect,
+  ClipPath,
+  FittedBox,
+  Opacity,
+  PhysicalModel,
+  ShaderMask,
 } from "./lumina-ui.js";
 ```
 
@@ -683,12 +762,44 @@ ClipRRect({ radius: 12 }, [
 ])
 ```
 
+#### Additional visual wrappers
+
+- `ClipOval(children)`: clips children to an oval/circle.
+- `ClipRect(children)`: clips rectangular overflow.
+- `ClipPath({ clipPath })`: applies CSS `clip-path`.
+- `FittedBox({ fit })`: constrains child media using object-fit-like behavior.
+- `Opacity({ opacity })`: changes child opacity.
+- `PhysicalModel({ elevation, color, shadowColor, borderRadius })`: adds material-like shadow and clipping.
+- `ShaderMask({ shader, blendMode: "text" })`: useful for gradient text.
+
+```js
+ShaderMask(
+  {
+    shader: "linear-gradient(135deg, #2563eb, #059669)",
+    blendMode: "text",
+  },
+  [Text("Gradient text", { weight: 900 })],
+)
+```
+
 ### Scrolling Widgets
 
 Import:
 
 ```js
-import { SingleChildScrollView, ListView, GridView } from "./lumina-ui.js";
+import {
+  SingleChildScrollView,
+  ListView,
+  GridView,
+  CustomScrollView,
+  NestedScrollView,
+  PageView,
+  SliverAppBar,
+  SliverList,
+  SliverGrid,
+  SliverPadding,
+  SliverToBoxAdapter,
+} from "./lumina-ui.js";
 ```
 
 #### `SingleChildScrollView(props, children)`
@@ -748,6 +859,117 @@ Use `columns` for a fixed number of columns:
 
 ```js
 GridView({ columns: 3, gap: 12 }, cards)
+```
+
+#### Advanced scrolling and sliver-style widgets
+
+LuminaUI includes DOM equivalents for Flutter scroll composition:
+
+- `CustomScrollView({ slivers })`
+- `NestedScrollView({ header, body })`
+- `PageView({ pages })`
+- `SliverAppBar({ title, pinned, floating })`
+- `SliverList(...)`
+- `SliverGrid(...)`
+- `SliverPadding({ padding }, children)`
+- `SliverToBoxAdapter(child)`
+
+These are not true Flutter slivers; they are composable DOM scroll sections that
+use CSS overflow, sticky positioning, and scroll snapping.
+
+```js
+CustomScrollView([
+  SliverAppBar({ title: "Pinned", pinned: true }),
+  SliverPadding({ padding: 12 }, [
+    SliverList({
+      items: ["One", "Two", "Three"],
+      itemBuilder: (item) => SliverToBoxAdapter([Text(item)]),
+    }),
+  ]),
+])
+
+PageView({
+  pages: [
+    Center([Text("Page 1")]),
+    Center([Text("Page 2")]),
+  ],
+})
+```
+
+### Interaction
+
+Import:
+
+```js
+import {
+  GestureDetector,
+  AbsorbPointer,
+  IgnorePointer,
+  Dismissible,
+  Draggable,
+  DragTarget,
+} from "./lumina-ui.js";
+```
+
+#### `GestureDetector(props, children)`
+
+Maps common Flutter gesture names to DOM pointer/click events.
+
+```js
+GestureDetector(
+  {
+    onTap: () => console.log("tap"),
+    onDoubleTap: () => console.log("double"),
+  },
+  [Text("Tap me")],
+)
+```
+
+#### Pointer control
+
+```js
+AbsorbPointer([Button({ text: "Blocked" })])
+IgnorePointer([Button({ text: "Clicks pass through" })])
+```
+
+#### Dismiss and drag/drop
+
+```js
+Dismissible(
+  {
+    direction: "horizontal",
+    onDismissed: () => removeItem(id),
+  },
+  [Text("Swipe or press Delete")],
+)
+
+Draggable({ data: { id: 1 } }, [Text("Drag me")])
+
+DragTarget(
+  {
+    onAccept: (data) => console.log(data),
+  },
+  [Text("Drop here")],
+)
+```
+
+### Accessibility
+
+Import:
+
+```js
+import { Semantics, ExcludeSemantics } from "./lumina-ui.js";
+```
+
+```js
+Semantics(
+  { label: "Save document", role: "button", hint: "Saves the current draft" },
+  [Button({ text: "Save" })],
+)
+
+ExcludeSemantics([
+  Icon("star"),
+])
 ```
 
 ### Feedback Widgets
@@ -1258,6 +1480,9 @@ DOM nodes aligned when arrays change.
 - scrolling widgets
 - feedback widgets
 - navigation widgets
+- Flutter parity batch widgets such as `AspectRatio`, `Transform`, `RichText`,
+  `CustomScrollView`, `PageView`, `SliverAppBar`, `GestureDetector`, and
+  `Semantics`
 
 Use it as a living playground for new widgets.
 
@@ -1315,12 +1540,20 @@ Completed:
 
 - Layout widgets: `Column`, `Row`, `Container`, `Center`, `Align`, `Padding`,
   `SizedBox`, `Flexible`, `Expanded`, `Spacer`, `Wrap`, `Stack`, `Positioned`,
-  `Divider`, `Card`
-- Text widgets: `Text`, `Heading`, `Caption`
+  `Divider`, `Card`, `AspectRatio`, `Baseline`, `ConstrainedBox`,
+  `DecoratedBox`, `FractionallySizedBox`, `LayoutBuilder`, `LimitedBox`,
+  `Offstage`, `OverflowBox`, `RotatedBox`, `SizedOverflowBox`, `Transform`
+- Text widgets: `Text`, `Heading`, `Caption`, `DefaultTextStyle`, `RichText`
 - Controls: `Button`, `Input`, `TextField`, `Checkbox`, `Switch`
 - Display widgets: `Icon`, `Image`, `CircleAvatar`, `Badge`, `Placeholder`,
-  `ClipRRect`
-- Scrolling widgets: `SingleChildScrollView`, `ListView`, `GridView`
+  `ClipRRect`, `ClipOval`, `ClipRect`, `ClipPath`, `FittedBox`, `Opacity`,
+  `PhysicalModel`, `ShaderMask`
+- Scrolling widgets: `SingleChildScrollView`, `ListView`, `GridView`,
+  `CustomScrollView`, `NestedScrollView`, `PageView`, `SliverAppBar`,
+  `SliverGrid`, `SliverList`, `SliverPadding`, `SliverToBoxAdapter`
+- Interaction widgets: `GestureDetector`, `AbsorbPointer`, `IgnorePointer`,
+  `Dismissible`, `Draggable`, `DragTarget`
+- Accessibility widgets: `Semantics`, `ExcludeSemantics`
 - Feedback widgets: `Dialog`, `AlertDialog`, `ModalBarrier`, `SnackBar`,
   `Tooltip`, `LinearProgressIndicator`, `CircularProgressIndicator`
 - Form widgets: `Form`, `FormField`, `Radio`, `RadioGroup`, `Slider`,
