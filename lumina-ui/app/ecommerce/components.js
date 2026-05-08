@@ -11,12 +11,11 @@ import {
   Padding,
   Positioned,
   Row,
-  SizedBox,
   Spacer,
   Stack,
   Wrap,
 } from "../../widgets/layout.js";
-import { Button, Input } from "../../widgets/controls.js";
+import { Button, Input, Switch } from "../../widgets/controls.js";
 import { Badge, Icon, Image, Opacity, PhysicalModel } from "../../widgets/display.js";
 import { Dialog, SnackBar } from "../../widgets/feedback.js";
 import {
@@ -31,32 +30,53 @@ import { Dismissible } from "../../widgets/interaction.js";
 import { AppBar, Drawer, Scaffold } from "../../widgets/navigation.js";
 import { GridView, ListView, SingleChildScrollView } from "../../widgets/scrolling.js";
 import { Caption, Heading, RichText, Text } from "../../widgets/text.js";
-import { categories, products, sortOptions } from "./data.js";
+import { sortOptions } from "./data.js";
 import {
+  adminMetrics,
   addToCart,
+  adjustProductStock,
   cartQuantity,
   cartSubtotal,
-  clearCart,
   closeProduct,
   filteredProducts,
   formatMoney,
+  getAdminDraft,
+  getAdminEditingId,
   getCart,
   getCartOpen,
+  getCatalogSource,
+  getCatalogStatus,
+  getCategories,
   getCategory,
+  getCheckoutEmail,
   getCheckoutOpen,
+  getCheckoutName,
+  getCheckoutNotes,
+  getFeaturedProduct,
+  getInterface,
   getMaxPrice,
+  getOrders,
   getPage,
   getPayment,
+  getProducts,
   getQuery,
   getShipping,
   getSnack,
   getSort,
+  maxCatalogPrice,
   openProduct,
   orderTotal,
+  placeOrder,
   removeFromCart,
+  saveAdminDraft,
+  setAdminDraftField,
   selectedProduct,
+  setInterface,
   setCartOpen,
   setCategory,
+  setCheckoutEmail,
+  setCheckoutName,
+  setCheckoutNotes,
   setCheckoutOpen,
   setMaxPrice,
   setPage,
@@ -66,7 +86,12 @@ import {
   setSnack,
   setSort,
   shippingCost,
+  startCreateProduct,
+  startEditProduct,
+  toggleProductActive,
+  updateOrderStatus,
   updateCartQuantity,
+  deleteProduct,
 } from "./store.js";
 
 export const theme = {
@@ -84,6 +109,7 @@ export const theme = {
 };
 
 export function StoreShell() {
+  const admin = getInterface() === "admin";
   return Scaffold({
     appBar: StoreAppBar(),
     body: SingleChildScrollView({
@@ -91,12 +117,12 @@ export function StoreShell() {
         minHeight: "calc(100vh - 66px)",
         backgroundColor: theme.background,
       },
-      child: Column([
+      child: admin ? AdminInterface() : Column([
         HeroSection(),
         MainContent(),
       ]),
     }),
-    drawer: CartDrawer(),
+    drawer: admin ? null : CartDrawer(),
     style: {
       minHeight: "100vh",
       backgroundColor: theme.background,
@@ -106,6 +132,7 @@ export function StoreShell() {
 }
 
 function StoreAppBar() {
+  const admin = getInterface() === "admin";
   return AppBar({
     height: 66,
     leading: Row({ gap: 10 }, [
@@ -124,10 +151,28 @@ function StoreAppBar() {
       Text("Lumina Store", { weight: 900, size: 18, color: theme.text }),
     ]),
     actions: [
-      NavButton("Shop", "shop"),
-      NavButton("Deals", "deals"),
-      NavButton("Checkout", "checkout"),
-      CartButton(),
+      ...(admin
+        ? [
+            DataSourceChip(),
+            Button({
+              text: "Storefront",
+              variant: "secondary",
+              onClick: () => setInterface("customer"),
+              style: { borderColor: theme.border, color: theme.text },
+            }),
+          ]
+        : [
+            NavButton("Shop", "shop"),
+            NavButton("Deals", "deals"),
+            NavButton("Checkout", "checkout"),
+            Button({
+              text: "Admin",
+              variant: "secondary",
+              onClick: () => setInterface("admin"),
+              style: { borderColor: theme.border, color: theme.text },
+            }),
+            CartButton(),
+          ]),
     ],
     style: {
       position: "sticky",
@@ -142,6 +187,26 @@ function StoreAppBar() {
       padding: "10px 16px",
     },
   });
+}
+
+function DataSourceChip() {
+  const loading = getCatalogStatus() === "loading";
+  return Container(
+    {
+      padding: { vertical: 6, horizontal: 10 },
+      decoration: {
+        color: loading ? "#fffbeb" : "#ecfdf5",
+        border: `1px solid ${loading ? "#fde68a" : "#bbf7d0"}`,
+        borderRadius: 999,
+      },
+    },
+    [
+      Caption(
+        { color: loading ? theme.warning : theme.accent },
+        loading ? "Loading JSON" : `JSON: ${getCatalogSource()}`,
+      ),
+    ],
+  );
 }
 
 function CartButton() {
@@ -277,7 +342,9 @@ function HeroSection() {
 }
 
 function HeroVisual() {
-  const featured = products[0];
+  const featured = getFeaturedProduct();
+  if (!featured) return EmptyProducts();
+
   return Container(
     {
       width: "min(100%, 420px)",
@@ -351,6 +418,359 @@ function MainContent() {
   );
 }
 
+function AdminInterface() {
+  return Container(
+    {
+      padding: { vertical: 22, horizontal: 20 },
+    },
+    [
+      ConstrainedBox(
+        { maxWidth: 1180, style: { margin: "0 auto" } },
+        [
+          Column({ gap: 18 }, [
+            AdminHeader(),
+            AdminMetrics(),
+            Row({ gap: 18, style: { alignItems: "flex-start", flexWrap: "wrap" } }, [
+              Expanded([
+                Column({ gap: 18 }, [
+                  ProductAdminPanel(),
+                  AdminProductForm(),
+                ]),
+              ]),
+              Container(
+                { width: "min(100%, 390px)" },
+                [OrderAdminPanel()],
+              ),
+            ]),
+          ]),
+        ],
+      ),
+    ],
+  );
+}
+
+function AdminHeader() {
+  return Card(
+    { padding: 18, style: { borderColor: theme.border } },
+    [
+      Row({ mainAxisAlignment: "spaceBetween", gap: 12, style: { flexWrap: "wrap" } }, [
+        Column({ gap: 4 }, [
+          Heading({ level: 1, style: { color: theme.text, fontSize: "30px" } }, "Commerce admin"),
+          Caption(
+            { color: theme.muted },
+            "Manage JSON-loaded products, inventory, orders, and storefront visibility.",
+          ),
+        ]),
+        Row({ gap: 8, style: { flexWrap: "wrap" } }, [
+          DataSourceChip(),
+          Button({
+            text: "New product",
+            onClick: startCreateProduct,
+            style: { backgroundColor: theme.primary, color: "#ffffff" },
+          }),
+        ]),
+      ]),
+    ],
+  );
+}
+
+function AdminMetrics() {
+  const metrics = adminMetrics();
+  return GridView({
+    minColumnWidth: 180,
+    gap: 12,
+    items: [
+      ["Revenue", formatMoney(metrics.revenue), "Across all orders"],
+      ["Orders", String(metrics.orders), `${metrics.processing} processing`],
+      ["Active products", String(metrics.activeProducts), `${getProducts().length} total SKUs`],
+      ["Low stock", String(metrics.lowStock), "Needs attention"],
+      ["Inventory value", formatMoney(metrics.inventoryValue), "At product cost"],
+    ],
+    itemBuilder: ([label, value, detail]) => MetricCard(label, value, detail),
+  });
+}
+
+function MetricCard(label, value, detail) {
+  return Card(
+    { padding: 16, style: { borderColor: theme.border } },
+    [
+      Column({ gap: 6 }, [
+        Caption({ color: theme.muted }, label),
+        Text(value, { color: theme.text, weight: 900, size: 24, lineHeight: 1.1 }),
+        Caption({ color: theme.muted }, detail),
+      ]),
+    ],
+  );
+}
+
+function ProductAdminPanel() {
+  return Card(
+    { padding: 0, style: { borderColor: theme.border, overflow: "hidden" } },
+    [
+      Padding({ padding: 16 }, [
+        Row({ mainAxisAlignment: "spaceBetween", gap: 12, style: { flexWrap: "wrap" } }, [
+          Column({ gap: 3 }, [
+            Text("Product operations", { color: theme.text, weight: 900, size: 18 }),
+            Caption({ color: theme.muted }, "Adjust stock, publish status, and edit product data."),
+          ]),
+          Caption({ color: theme.muted }, `${getProducts().length} products`),
+        ]),
+      ]),
+      Divider({ color: theme.border, margin: 0 }),
+      ListView({
+        items: getProducts(),
+        itemBuilder: ProductAdminRow,
+      }),
+    ],
+  );
+}
+
+function ProductAdminRow(product) {
+  const low = product.stock <= product.lowStockThreshold;
+  return [
+    Padding({ padding: 14 }, [
+      Row({ gap: 12, style: { alignItems: "center", flexWrap: "wrap" } }, [
+        Container(
+          {
+            width: 58,
+            height: 58,
+            decoration: { borderRadius: 10 },
+            style: { overflow: "hidden", flexShrink: 0 },
+          },
+          [Image({ src: product.image, alt: product.name, width: 58, height: 58 })],
+        ),
+        Expanded([
+          Column({ gap: 5 }, [
+            Row({ gap: 8, style: { flexWrap: "wrap", alignItems: "center" } }, [
+              Text(product.name, { color: theme.text, weight: 900 }),
+              StatusPill(product.active ? "Live" : "Hidden", product.active ? theme.accent : theme.muted),
+              low ? StatusPill("Low stock", theme.warning) : null,
+            ]),
+            Caption(
+              { color: theme.muted },
+              `${product.sku} · ${product.category} · ${formatMoney(product.price)} · ${product.vendor}`,
+            ),
+          ]),
+        ]),
+        Row({ gap: 6, style: { alignItems: "center" } }, [
+          Button({
+            text: "-",
+            variant: "secondary",
+            onClick: () => adjustProductStock(product.id, -1),
+            style: { padding: "4px 9px", borderColor: theme.border },
+          }),
+          Text(String(product.stock), {
+            color: low ? theme.warning : theme.text,
+            weight: 900,
+            style: { minWidth: "26px", textAlign: "center" },
+          }),
+          Button({
+            text: "+",
+            variant: "secondary",
+            onClick: () => adjustProductStock(product.id, 1),
+            style: { padding: "4px 9px", borderColor: theme.border },
+          }),
+        ]),
+        Switch({
+          value: product.active,
+          ariaLabel: `${product.name} visibility`,
+          onChange: () => toggleProductActive(product.id),
+        }),
+        Button({
+          text: "Edit",
+          variant: "secondary",
+          onClick: () => startEditProduct(product.id),
+          style: { borderColor: theme.border, color: theme.text },
+        }),
+        Button({
+          text: "Delete",
+          variant: "text",
+          onClick: () => deleteProduct(product.id),
+          style: { color: theme.danger },
+        }),
+      ]),
+    ]),
+    Divider({ color: theme.border, margin: 0 }),
+  ];
+}
+
+function AdminProductForm() {
+  const draft = getAdminDraft();
+  const editing = getAdminEditingId();
+
+  return Card(
+    { padding: 16, style: { borderColor: theme.border } },
+    [
+      Form(
+        {
+          gap: 14,
+          onSubmit: saveAdminDraft,
+        },
+        [
+          Row({ mainAxisAlignment: "spaceBetween", gap: 12, style: { flexWrap: "wrap" } }, [
+            Column({ gap: 3 }, [
+              Text(editing ? "Edit product" : "Create product", {
+                color: theme.text,
+                weight: 900,
+                size: 18,
+              }),
+              Caption({ color: theme.muted }, editing || "New SKU"),
+            ]),
+            Button({
+              text: "Reset",
+              variant: "secondary",
+              onClick: startCreateProduct,
+              style: { borderColor: theme.border, color: theme.text },
+            }),
+          ]),
+          Row({ gap: 12, style: { flexWrap: "wrap" } }, [
+            Expanded([DraftField("Name", "name", draft.name)]),
+            Expanded([DraftField("SKU", "sku", draft.sku)]),
+          ]),
+          Row({ gap: 12, style: { flexWrap: "wrap" } }, [
+            Expanded([DraftField("Category", "category", draft.category)]),
+            Expanded([DraftField("Vendor", "vendor", draft.vendor)]),
+            Expanded([DraftField("Color", "color", draft.color)]),
+          ]),
+          Row({ gap: 12, style: { flexWrap: "wrap" } }, [
+            Expanded([DraftField("Price", "price", draft.price, "number")]),
+            Expanded([DraftField("Cost", "cost", draft.cost, "number")]),
+            Expanded([DraftField("Stock", "stock", draft.stock, "number")]),
+            Expanded([DraftField("Rating", "rating", draft.rating, "number")]),
+          ]),
+          Row({ gap: 12, style: { flexWrap: "wrap" } }, [
+            Expanded([DraftField("Badge", "badge", draft.badge)]),
+            Expanded([DraftField("Tags", "tags", draft.tags)]),
+            Expanded([DraftField("Low stock", "lowStockThreshold", draft.lowStockThreshold, "number")]),
+          ]),
+          FormField({ label: "Description" }, [
+            TextArea({
+              value: draft.description,
+              onChange: (value) => setAdminDraftField("description", value),
+              rows: 3,
+              style: { borderColor: theme.border },
+            }),
+          ]),
+          Row({ gap: 12, style: { flexWrap: "wrap", alignItems: "center" } }, [
+            DraftSwitch("Active on storefront", "active", draft.active),
+            DraftSwitch("Featured product", "featured", draft.featured),
+            Spacer(),
+            Button({
+              text: "Save product",
+              type: "submit",
+              style: { backgroundColor: theme.primary, color: "#ffffff" },
+            }),
+          ]),
+        ],
+      ),
+    ],
+  );
+}
+
+function DraftField(label, field, value, type = "text") {
+  return FormField({ label }, [
+    Input({
+      type,
+      value,
+      onChange: (next) => setAdminDraftField(field, next),
+      style: { width: "100%", borderColor: theme.border },
+    }),
+  ]);
+}
+
+function DraftSwitch(label, field, value) {
+  return Row({ gap: 8 }, [
+    Switch({
+      value: !!value,
+      ariaLabel: label,
+      onChange: (next) => setAdminDraftField(field, next),
+    }),
+    Text(label, { color: theme.text, weight: 700 }),
+  ]);
+}
+
+function OrderAdminPanel() {
+  return Card(
+    { padding: 0, style: { borderColor: theme.border, overflow: "hidden" } },
+    [
+      Padding({ padding: 16 }, [
+        Column({ gap: 3 }, [
+          Text("Order queue", { color: theme.text, weight: 900, size: 18 }),
+          Caption({ color: theme.muted }, "Update fulfillment status from the admin view."),
+        ]),
+      ]),
+      Divider({ color: theme.border, margin: 0 }),
+      ListView({
+        items: getOrders(),
+        itemBuilder: OrderAdminCard,
+      }),
+    ],
+  );
+}
+
+function OrderAdminCard(order) {
+  return [
+    Padding({ padding: 14 }, [
+      Column({ gap: 10 }, [
+        Row({ mainAxisAlignment: "spaceBetween", gap: 10 }, [
+          Column({ gap: 2 }, [
+            Text(order.id, { color: theme.text, weight: 900 }),
+            Caption({ color: theme.muted }, `${order.customer.name} · ${order.placedAt}`),
+          ]),
+          StatusPill(order.status, statusColor(order.status)),
+        ]),
+        Caption({ color: theme.muted }, orderItems(order)),
+        Row({ mainAxisAlignment: "spaceBetween", gap: 10, style: { alignItems: "center" } }, [
+          Text(formatMoney(order.total), { color: theme.primary, weight: 900 }),
+          Dropdown({
+            value: order.status,
+            onChange: (status) => updateOrderStatus(order.id, status),
+            options: [
+              { label: "Processing", value: "processing" },
+              { label: "Packed", value: "packed" },
+              { label: "Shipped", value: "shipped" },
+              { label: "Delivered", value: "delivered" },
+              { label: "Cancelled", value: "cancelled" },
+            ],
+            style: { width: 150, borderColor: theme.border },
+          }),
+        ]),
+      ]),
+    ]),
+    Divider({ color: theme.border, margin: 0 }),
+  ];
+}
+
+function orderItems(order) {
+  return order.items
+    .map((item) => {
+      const product = getProducts().find((entry) => entry.id === item.productId);
+      return `${item.quantity}x ${product ? product.name : item.productId}`;
+    })
+    .join(", ");
+}
+
+function StatusPill(label, color) {
+  return Container(
+    {
+      padding: { vertical: 4, horizontal: 8 },
+      decoration: {
+        color: `${color}18`,
+        border: `1px solid ${color}44`,
+        borderRadius: 999,
+      },
+    },
+    [Caption({ color }, label)],
+  );
+}
+
+function statusColor(status) {
+  if (status === "delivered" || status === "shipped") return theme.accent;
+  if (status === "cancelled") return theme.danger;
+  if (status === "packed") return theme.primary;
+  return theme.warning;
+}
+
 function FilterPanel() {
   return Card(
     {
@@ -376,7 +796,7 @@ function FilterPanel() {
           Caption({ color: theme.muted }, "Category"),
           Wrap(
             { gap: 8 },
-            categories.map((category) =>
+            getCategories().map((category) =>
               Button({
                 key: category,
                 text: category,
@@ -401,7 +821,7 @@ function FilterPanel() {
           Slider({
             value: getMaxPrice(),
             min: 50,
-            max: 250,
+            max: maxCatalogPrice(),
             step: 10,
             onChange: setMaxPrice,
           }),
@@ -540,7 +960,7 @@ function ProductCard(product) {
             ]),
             Caption(
               { color: theme.muted },
-              `${product.category} · ${product.color} · ${product.rating} stars`,
+              `${product.category} · ${product.color} · ${product.stock} in stock`,
             ),
             Text(product.description, {
               color: theme.muted,
@@ -550,7 +970,8 @@ function ProductCard(product) {
             Row({ gap: 8 }, [
               Expanded([
                 Button({
-                  text: "Add to cart",
+                  text: product.stock ? "Add to cart" : "Sold out",
+                  disabled: product.stock <= 0,
                   onClick: () => addToCart(product.id),
                   style: {
                     width: "100%",
@@ -676,7 +1097,7 @@ export function CartDrawer() {
 }
 
 function CartItem(item) {
-  const product = products.find((entry) => entry.id === item.productId);
+  const product = getProducts().find((entry) => entry.id === item.productId);
   if (!product) return null;
 
   return Dismissible(
@@ -820,11 +1241,9 @@ export function ProductDialog() {
           Padding({ padding: 22 }, [
             Column({ gap: 14 }, [
               Row({ mainAxisAlignment: "spaceBetween", gap: 12 }, [
-                Badge({ label: product.badge, color: theme.accent }, [
-                  Text(product.category, {
-                    color: theme.accent,
-                    weight: 800,
-                  }),
+                Row({ gap: 8, style: { flexWrap: "wrap" } }, [
+                  ProductBadge(product.badge, theme.accent),
+                  DetailPill("Category", product.category),
                 ]),
                 Button({
                   text: "Close",
@@ -846,7 +1265,8 @@ export function ProductDialog() {
               Divider({ color: theme.border }),
               Row({ gap: 10 }, [
                 Button({
-                  text: "Add to cart",
+                  text: product.stock ? "Add to cart" : "Sold out",
+                  disabled: product.stock <= 0,
                   onClick: () => {
                     addToCart(product.id);
                     closeProduct();
@@ -917,18 +1337,15 @@ export function CheckoutDialog() {
           Form(
             {
               gap: 12,
-              onSubmit: () => {
-                clearCart();
-                setCheckoutOpen(false);
-                setSnack("Order placed. Demo checkout complete.");
-                setPage("shop");
-              },
+              onSubmit: placeOrder,
             },
             [
               Row({ gap: 12, style: { flexWrap: "wrap" } }, [
                 Expanded([
                   FormField({ label: "Full name", required: true }, [
                     Input({
+                      value: getCheckoutName(),
+                      onChange: setCheckoutName,
                       placeholder: "Amina Banda",
                       style: { width: "100%", borderColor: theme.border },
                     }),
@@ -938,6 +1355,8 @@ export function CheckoutDialog() {
                   FormField({ label: "Email", required: true }, [
                     Input({
                       type: "email",
+                      value: getCheckoutEmail(),
+                      onChange: setCheckoutEmail,
                       placeholder: "amina@example.com",
                       style: { width: "100%", borderColor: theme.border },
                     }),
@@ -946,6 +1365,8 @@ export function CheckoutDialog() {
               ]),
               FormField({ label: "Delivery notes" }, [
                 TextArea({
+                  value: getCheckoutNotes(),
+                  onChange: setCheckoutNotes,
                   rows: 3,
                   placeholder: "Apartment, gate code, preferred delivery time...",
                   style: { borderColor: theme.border },

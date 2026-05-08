@@ -1,6 +1,6 @@
 import { Column } from "../../widgets/layout.js";
 import { Footer, ProductDialog, StoreShell, StoreSnackBar, CheckoutDialog } from "./components.js";
-import { subscriptions } from "./store.js";
+import { ensureCatalogLoaded, subscriptions } from "./store.js";
 
 const subscribedUpdates = new WeakSet();
 
@@ -15,6 +15,7 @@ function bindState(forceUpdate) {
 
 export function EcommerceApp(forceUpdate) {
   bindState(forceUpdate);
+  ensureCatalogLoaded();
 
   return Column([
     StoreShell(),

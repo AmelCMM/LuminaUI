@@ -1472,10 +1472,13 @@ DOM nodes aligned when arrays change.
 
 `lumina-ui/app/App.js` demonstrates:
 
-- a full ecommerce storefront
-- product grid, product detail dialog, filters, sorting, and search
+- a full ecommerce storefront backed by `lumina-ui/app/ecommerce/catalog.json`
+- product grid, product detail dialog, filters, sorting, search, and stock-aware
+  cart actions
 - cart drawer with quantity controls and dismissible rows
-- checkout form with shipping and payment choices
+- checkout form with shipping and payment choices that creates demo orders
+- an admin interface for inventory, publish status, product editing, order
+  status updates, and dashboard metrics
 - snackbars, dialogs, navigation, scrolling, forms, display widgets, and layout
   primitives working together
 
