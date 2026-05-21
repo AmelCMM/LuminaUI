@@ -106,7 +106,29 @@ export const theme = {
   accent: "#059669",
   warning: "#d97706",
   danger: "#dc2626",
+  // Only mobile breakpoint values
+  mobile: {
+    breakpoint: 768,
+    spacing: {
+      padding: "16px",
+      gap: "12px",
+    },
+  },
 };
+
+// Add this CSS to your global styles or head
+const responsiveCSS = `
+@media (max-width: 768px) {
+  .mobile-column { flex-direction: column !important; }
+  .mobile-full-width { width: 100% !important; }
+  .mobile-stack { flex-wrap: wrap !important; }
+  .mobile-text-small { font-size: 14px !important; }
+  .mobile-padding { padding: 16px !important; }
+  .mobile-gap { gap: 12px !important; }
+  .mobile-hidden { display: none !important; }
+  .mobile-block { display: block !important; }
+}
+`;
 
 export function StoreShell() {
   const admin = getInterface() === "admin";
@@ -120,6 +142,7 @@ export function StoreShell() {
       child: admin ? AdminInterface() : Column([
         HeroSection(),
         MainContent(),
+        Footer(),
       ]),
     }),
     drawer: admin ? null : CartDrawer(),
@@ -135,7 +158,7 @@ function StoreAppBar() {
   const admin = getInterface() === "admin";
   return AppBar({
     height: 66,
-    leading: Row({ gap: 10 }, [
+    leading: Row({ gap: 10, className: "mobile-gap" }, [
       Container(
         {
           width: 34,
@@ -148,7 +171,7 @@ function StoreAppBar() {
         },
         [Text("L", { color: "#ffffff", weight: 900, size: 18 })],
       ),
-      Text("Lumina Store", { weight: 900, size: 18, color: theme.text }),
+      Text("Lumina Store", { weight: 900, size: 18, color: theme.text, className: "mobile-text-small" }),
     ]),
     actions: [
       ...(admin
@@ -258,9 +281,13 @@ function HeroSection() {
           style: { margin: "0 auto" },
         },
         [
-          Row({ gap: 24, style: { alignItems: "stretch", flexWrap: "wrap" } }, [
+          Row({ 
+            gap: 24, 
+            className: "mobile-column",
+            style: { alignItems: "stretch" } 
+          }, [
             Expanded([
-              Column({ gap: 16 }, [
+              Column({ gap: 16, className: "mobile-gap" }, [
                 Badge({ label: "Spring drop", color: theme.accent }, [
                   Container(
                     {
@@ -285,9 +312,10 @@ function HeroSection() {
                     style: {
                       color: theme.text,
                       fontSize: "46px",
-                      lineHeight: 1.02,
+                      lineHeight: 1.2,
                       maxWidth: "680px",
                     },
+                    className: "mobile-text-small",
                   },
                   "Everyday gear, designed for focus.",
                 ),
@@ -308,7 +336,11 @@ function HeroSection() {
                     },
                   ],
                 }),
-                Row({ gap: 10, style: { flexWrap: "wrap" } }, [
+                Row({ 
+                  gap: 10, 
+                  className: "mobile-stack mobile-gap",
+                  style: { flexWrap: "wrap" } 
+                }, [
                   Button({
                     text: "Shop products",
                     onClick: () => setPage("shop"),
@@ -347,7 +379,9 @@ function HeroVisual() {
 
   return Container(
     {
-      width: "min(100%, 420px)",
+      width: "100%",
+      maxWidth: "420px",
+      className: "mobile-full-width",
       decoration: {
         color: "#eff6ff",
         border: `1px solid ${theme.border}`,
@@ -358,7 +392,7 @@ function HeroVisual() {
       },
     },
     [
-      Stack({ height: 300 }, [
+      Stack({ height: 300, style: { width: "100%" } }, [
         Image({
           src: featured.image,
           alt: featured.name,
@@ -403,7 +437,11 @@ function MainContent() {
           style: { margin: "0 auto" },
         },
         [
-          Row({ gap: 18, style: { alignItems: "flex-start", flexWrap: "wrap" } }, [
+          Row({ 
+            gap: 18, 
+            className: "mobile-column",
+            style: { alignItems: "flex-start" } 
+          }, [
             FilterPanel(),
             Expanded([
               Column({ gap: 16 }, [
@@ -430,7 +468,11 @@ function AdminInterface() {
           Column({ gap: 18 }, [
             AdminHeader(),
             AdminMetrics(),
-            Row({ gap: 18, style: { alignItems: "flex-start", flexWrap: "wrap" } }, [
+            Row({ 
+              gap: 18, 
+              className: "mobile-column",
+              style: { alignItems: "flex-start" } 
+            }, [
               Expanded([
                 Column({ gap: 18 }, [
                   ProductAdminPanel(),
@@ -438,7 +480,11 @@ function AdminInterface() {
                 ]),
               ]),
               Container(
-                { width: "min(100%, 390px)" },
+                { 
+                  width: "100%",
+                  maxWidth: "390px",
+                  className: "mobile-full-width",
+                },
                 [OrderAdminPanel()],
               ),
             ]),
@@ -453,7 +499,12 @@ function AdminHeader() {
   return Card(
     { padding: 18, style: { borderColor: theme.border } },
     [
-      Row({ mainAxisAlignment: "spaceBetween", gap: 12, style: { flexWrap: "wrap" } }, [
+      Row({ 
+        mainAxisAlignment: "spaceBetween", 
+        gap: 12, 
+        className: "mobile-column mobile-gap",
+        style: { flexWrap: "wrap" } 
+      }, [
         Column({ gap: 4 }, [
           Heading({ level: 1, style: { color: theme.text, fontSize: "30px" } }, "Commerce admin"),
           Caption(
@@ -461,7 +512,11 @@ function AdminHeader() {
             "Manage JSON-loaded products, inventory, orders, and storefront visibility.",
           ),
         ]),
-        Row({ gap: 8, style: { flexWrap: "wrap" } }, [
+        Row({ 
+          gap: 8, 
+          className: "mobile-stack mobile-gap",
+          style: { flexWrap: "wrap" } 
+        }, [
           DataSourceChip(),
           Button({
             text: "New product",
@@ -508,7 +563,12 @@ function ProductAdminPanel() {
     { padding: 0, style: { borderColor: theme.border, overflow: "hidden" } },
     [
       Padding({ padding: 16 }, [
-        Row({ mainAxisAlignment: "spaceBetween", gap: 12, style: { flexWrap: "wrap" } }, [
+        Row({ 
+          mainAxisAlignment: "spaceBetween", 
+          gap: 12, 
+          className: "mobile-column mobile-gap",
+          style: { flexWrap: "wrap" } 
+        }, [
           Column({ gap: 3 }, [
             Text("Product operations", { color: theme.text, weight: 900, size: 18 }),
             Caption({ color: theme.muted }, "Adjust stock, publish status, and edit product data."),
@@ -532,7 +592,11 @@ function ProductAdminRow(product) {
     { key: product.id },
     [
       Padding({ padding: 14 }, [
-        Row({ gap: 12, style: { alignItems: "center", flexWrap: "wrap" } }, [
+        Row({ 
+          gap: 12, 
+          className: "mobile-column mobile-gap",
+          style: { alignItems: "center" } 
+        }, [
           Container(
             {
               width: 58,
@@ -544,7 +608,11 @@ function ProductAdminRow(product) {
           ),
           Expanded([
             Column({ gap: 5 }, [
-              Row({ gap: 8, style: { flexWrap: "wrap", alignItems: "center" } }, [
+              Row({ 
+                gap: 8, 
+                className: "mobile-stack",
+                style: { flexWrap: "wrap", alignItems: "center" } 
+              }, [
                 Text(product.name, { color: theme.text, weight: 900 }),
                 StatusPill(product.active ? "Live" : "Hidden", product.active ? theme.accent : theme.muted),
                 low ? StatusPill("Low stock", theme.warning) : null,
@@ -555,7 +623,11 @@ function ProductAdminRow(product) {
               ),
             ]),
           ]),
-          Row({ gap: 6, style: { alignItems: "center" } }, [
+          Row({ 
+            gap: 6, 
+            className: "mobile-stack mobile-gap",
+            style: { alignItems: "center", flexWrap: "wrap" } 
+          }, [
             Button({
               text: "-",
               variant: "secondary",
@@ -611,7 +683,12 @@ function AdminProductForm() {
           onSubmit: saveAdminDraft,
         },
         [
-          Row({ mainAxisAlignment: "spaceBetween", gap: 12, style: { flexWrap: "wrap" } }, [
+          Row({ 
+            mainAxisAlignment: "spaceBetween", 
+            gap: 12, 
+            className: "mobile-column mobile-gap",
+            style: { flexWrap: "wrap" } 
+          }, [
             Column({ gap: 3 }, [
               Text(editing ? "Edit product" : "Create product", {
                 color: theme.text,
@@ -627,22 +704,38 @@ function AdminProductForm() {
               style: { borderColor: theme.border, color: theme.text },
             }),
           ]),
-          Row({ gap: 12, style: { flexWrap: "wrap" } }, [
+          Row({ 
+            gap: 12, 
+            className: "mobile-column",
+            style: { flexWrap: "wrap" } 
+          }, [
             Expanded([DraftField("Name", "name", draft.name)]),
             Expanded([DraftField("SKU", "sku", draft.sku)]),
           ]),
-          Row({ gap: 12, style: { flexWrap: "wrap" } }, [
+          Row({ 
+            gap: 12, 
+            className: "mobile-column",
+            style: { flexWrap: "wrap" } 
+          }, [
             Expanded([DraftField("Category", "category", draft.category)]),
             Expanded([DraftField("Vendor", "vendor", draft.vendor)]),
             Expanded([DraftField("Color", "color", draft.color)]),
           ]),
-          Row({ gap: 12, style: { flexWrap: "wrap" } }, [
+          Row({ 
+            gap: 12, 
+            className: "mobile-column",
+            style: { flexWrap: "wrap" } 
+          }, [
             Expanded([DraftField("Price", "price", draft.price, "number")]),
             Expanded([DraftField("Cost", "cost", draft.cost, "number")]),
             Expanded([DraftField("Stock", "stock", draft.stock, "number")]),
             Expanded([DraftField("Rating", "rating", draft.rating, "number")]),
           ]),
-          Row({ gap: 12, style: { flexWrap: "wrap" } }, [
+          Row({ 
+            gap: 12, 
+            className: "mobile-column",
+            style: { flexWrap: "wrap" } 
+          }, [
             Expanded([DraftField("Badge", "badge", draft.badge)]),
             Expanded([DraftField("Tags", "tags", draft.tags)]),
             Expanded([DraftField("Low stock", "lowStockThreshold", draft.lowStockThreshold, "number")]),
@@ -655,7 +748,11 @@ function AdminProductForm() {
               style: { borderColor: theme.border },
             }),
           ]),
-          Row({ gap: 12, style: { flexWrap: "wrap", alignItems: "center" } }, [
+          Row({ 
+            gap: 12, 
+            className: "mobile-column",
+            style: { flexWrap: "wrap", alignItems: "center" } 
+          }, [
             DraftSwitch("Active on storefront", "active", draft.active),
             DraftSwitch("Featured product", "featured", draft.featured),
             Spacer(),
@@ -683,7 +780,7 @@ function DraftField(label, field, value, type = "text") {
 }
 
 function DraftSwitch(label, field, value) {
-  return Row({ gap: 8 }, [
+  return Row({ gap: 8, className: "mobile-gap" }, [
     Switch({
       value: !!value,
       ariaLabel: label,
@@ -719,7 +816,11 @@ function OrderAdminCard(order) {
     [
       Padding({ padding: 14 }, [
         Column({ gap: 10 }, [
-          Row({ mainAxisAlignment: "spaceBetween", gap: 10 }, [
+          Row({ 
+            mainAxisAlignment: "spaceBetween", 
+            gap: 10,
+            className: "mobile-column mobile-gap",
+          }, [
             Column({ gap: 2 }, [
               Text(order.id, { color: theme.text, weight: 900 }),
               Caption({ color: theme.muted }, `${order.customer.name} · ${order.placedAt}`),
@@ -727,7 +828,12 @@ function OrderAdminCard(order) {
             StatusPill(order.status, statusColor(order.status)),
           ]),
           Caption({ color: theme.muted }, orderItems(order)),
-          Row({ mainAxisAlignment: "spaceBetween", gap: 10, style: { alignItems: "center" } }, [
+          Row({ 
+            mainAxisAlignment: "spaceBetween", 
+            gap: 10, 
+            className: "mobile-column mobile-gap",
+            style: { alignItems: "center" } 
+          }, [
             Text(formatMoney(order.total), { color: theme.primary, weight: 900 }),
             Dropdown({
               value: order.status,
@@ -739,7 +845,7 @@ function OrderAdminCard(order) {
                 { label: "Delivered", value: "delivered" },
                 { label: "Cancelled", value: "cancelled" },
               ],
-              style: { width: 150, borderColor: theme.border },
+              style: { width: 150, borderColor: theme.border, className: "mobile-full-width" },
             }),
           ]),
         ]),
@@ -784,9 +890,11 @@ function FilterPanel() {
     {
       padding: 16,
       style: {
-        width: "min(100%, 280px)",
+        width: "100%",
+        maxWidth: "280px",
         borderColor: theme.border,
       },
+      className: "mobile-full-width",
     },
     [
       Column({ gap: 14 }, [
@@ -803,7 +911,7 @@ function FilterPanel() {
         Column({ gap: 8 }, [
           Caption({ color: theme.muted }, "Category"),
           Wrap(
-            { gap: 8 },
+            { gap: 8, className: "mobile-gap" },
             getCategories().map((category) =>
               Button({
                 key: category,
@@ -852,7 +960,12 @@ function FilterPanel() {
 
 function Toolbar() {
   const page = getPage();
-  return Row({ gap: 12, mainAxisAlignment: "spaceBetween", style: { flexWrap: "wrap" } }, [
+  return Row({ 
+    gap: 12, 
+    mainAxisAlignment: "spaceBetween", 
+    className: "mobile-column mobile-gap",
+    style: { flexWrap: "wrap" } 
+  }, [
     Column({ gap: 3 }, [
       Heading(
         { level: 2, style: { color: theme.text } },
@@ -863,7 +976,11 @@ function Toolbar() {
         "Browse Lumina Store products built with LuminaUI widgets.",
       ),
     ]),
-    Row({ gap: 8 }, [
+    Row({ 
+      gap: 8, 
+      className: "mobile-stack mobile-gap",
+      style: { flexWrap: "wrap" } 
+    }, [
       Button({
         text: "Clear filters",
         variant: "text",
@@ -952,7 +1069,11 @@ function ProductCard(product) {
         ]),
         Padding({ padding: 14 }, [
           Column({ gap: 10 }, [
-            Row({ mainAxisAlignment: "spaceBetween", gap: 10 }, [
+            Row({ 
+              mainAxisAlignment: "spaceBetween", 
+              gap: 10,
+              className: "mobile-column",
+            }, [
               Expanded([
                 Text(product.name, {
                   weight: 900,
@@ -975,7 +1096,11 @@ function ProductCard(product) {
               maxLines: 2,
               lineHeight: 1.45,
             }),
-            Row({ gap: 8 }, [
+            Row({ 
+              gap: 8, 
+              className: "mobile-column mobile-gap",
+              style: { flexWrap: "wrap" } 
+            }, [
               Expanded([
                 Button({
                   text: product.stock ? "Add to cart" : "Sold out",
@@ -1062,7 +1187,11 @@ export function CartDrawer() {
     [
       Column({ style: { minHeight: "100%" } }, [
         Padding({ padding: 18 }, [
-          Row({ mainAxisAlignment: "spaceBetween", gap: 12 }, [
+          Row({ 
+            mainAxisAlignment: "spaceBetween", 
+            gap: 12,
+            className: "mobile-column",
+          }, [
             Column({ gap: 4 }, [
               Heading({ level: 2, style: { color: theme.text } }, "Cart"),
               Caption({ color: theme.muted }, `${cartQuantity()} items`),
@@ -1115,7 +1244,11 @@ function CartItem(item) {
     },
     [
       Padding({ padding: 14 }, [
-        Row({ gap: 12, style: { alignItems: "stretch" } }, [
+        Row({ 
+          gap: 12, 
+          className: "mobile-column",
+          style: { alignItems: "stretch" } 
+        }, [
           Container(
             {
               width: 74,
@@ -1134,7 +1267,11 @@ function CartItem(item) {
           ),
           Expanded([
             Column({ gap: 7 }, [
-              Row({ mainAxisAlignment: "spaceBetween", gap: 10 }, [
+              Row({ 
+                mainAxisAlignment: "spaceBetween", 
+                gap: 10,
+                className: "mobile-column",
+              }, [
                 Text(product.name, { weight: 800, color: theme.text }),
                 Text(formatMoney(product.price * item.quantity), {
                   weight: 900,
@@ -1142,7 +1279,11 @@ function CartItem(item) {
                 }),
               ]),
               Caption({ color: theme.muted }, product.color),
-              Row({ gap: 8 }, [
+              Row({ 
+                gap: 8, 
+                className: "mobile-stack mobile-gap",
+                style: { flexWrap: "wrap", alignItems: "center" } 
+              }, [
                 Button({
                   text: "-",
                   variant: "secondary",
@@ -1210,7 +1351,10 @@ function CartSummary() {
 }
 
 function SummaryRow(label, value, strong = false) {
-  return Row({ mainAxisAlignment: "spaceBetween" }, [
+  return Row({ 
+    mainAxisAlignment: "spaceBetween",
+    className: "mobile-column",
+  }, [
     Text(label, { color: strong ? theme.text : theme.muted, weight: strong ? 900 : 500 }),
     Text(value, { color: theme.text, weight: strong ? 900 : 700 }),
   ]);
@@ -1230,10 +1374,15 @@ export function ProductDialog() {
       },
     },
     [
-      Row({ style: { flexWrap: "wrap", alignItems: "stretch" } }, [
+      Row({ 
+        className: "mobile-column",
+        style: { flexWrap: "wrap", alignItems: "stretch" } 
+      }, [
         Container(
           {
-            width: "min(100%, 420px)",
+            width: "100%",
+            maxWidth: "420px",
+            className: "mobile-full-width",
             style: { overflow: "hidden" },
           },
           [
@@ -1248,8 +1397,16 @@ export function ProductDialog() {
         Expanded([
           Padding({ padding: 22 }, [
             Column({ gap: 14 }, [
-              Row({ mainAxisAlignment: "spaceBetween", gap: 12 }, [
-                Row({ gap: 8, style: { flexWrap: "wrap" } }, [
+              Row({ 
+                mainAxisAlignment: "spaceBetween", 
+                gap: 12,
+                className: "mobile-column",
+              }, [
+                Row({ 
+                  gap: 8, 
+                  className: "mobile-stack",
+                  style: { flexWrap: "wrap" } 
+                }, [
                   ProductBadge(product.badge, theme.accent),
                   DetailPill("Category", product.category),
                 ]),
@@ -1265,13 +1422,21 @@ export function ProductDialog() {
                 lineHeight: 1.7,
                 as: "p",
               }),
-              Row({ gap: 14, style: { flexWrap: "wrap" } }, [
+              Row({ 
+                gap: 14, 
+                className: "mobile-stack mobile-gap",
+                style: { flexWrap: "wrap" } 
+              }, [
                 DetailPill("Price", formatMoney(product.price)),
                 DetailPill("Rating", `${product.rating} stars`),
                 DetailPill("Stock", `${product.stock} available`),
               ]),
               Divider({ color: theme.border }),
-              Row({ gap: 10 }, [
+              Row({ 
+                gap: 10, 
+                className: "mobile-column mobile-gap",
+                style: { flexWrap: "wrap" } 
+              }, [
                 Button({
                   text: product.stock ? "Add to cart" : "Sold out",
                   disabled: product.stock <= 0,
@@ -1331,7 +1496,11 @@ export function CheckoutDialog() {
     [
       Padding({ padding: 22 }, [
         Column({ gap: 16 }, [
-          Row({ mainAxisAlignment: "spaceBetween", gap: 12 }, [
+          Row({ 
+            mainAxisAlignment: "spaceBetween", 
+            gap: 12,
+            className: "mobile-column",
+          }, [
             Column({ gap: 4 }, [
               Heading({ level: 2, style: { color: theme.text } }, "Checkout"),
               Caption({ color: theme.muted }, "Complete your demo order."),
@@ -1348,7 +1517,11 @@ export function CheckoutDialog() {
               onSubmit: placeOrder,
             },
             [
-              Row({ gap: 12, style: { flexWrap: "wrap" } }, [
+              Row({ 
+                gap: 12, 
+                className: "mobile-column",
+                style: { flexWrap: "wrap" } 
+              }, [
                 Expanded([
                   FormField({ label: "Full name", required: true }, [
                     Input({
@@ -1380,7 +1553,11 @@ export function CheckoutDialog() {
                   style: { borderColor: theme.border },
                 }),
               ]),
-              Row({ gap: 12, style: { flexWrap: "wrap" } }, [
+              Row({ 
+                gap: 12, 
+                className: "mobile-column",
+                style: { flexWrap: "wrap" } 
+              }, [
                 Expanded([
                   FormField({ label: "Shipping" }, [
                     RadioGroup({
@@ -1423,7 +1600,12 @@ export function CheckoutDialog() {
                   ]),
                 ],
               ),
-              Row({ mainAxisAlignment: "end", gap: 10 }, [
+              Row({ 
+                mainAxisAlignment: "end", 
+                gap: 10, 
+                className: "mobile-column",
+                style: { flexWrap: "wrap" } 
+              }, [
                 Button({
                   text: "Back to cart",
                   variant: "secondary",
@@ -1470,13 +1652,19 @@ export function Footer() {
       style: {
         backgroundColor: theme.surface,
         borderTop: `1px solid ${theme.border}`,
+        marginTop: "auto",
       },
     },
     [
       ConstrainedBox(
         { maxWidth: 1180, style: { margin: "0 auto" } },
         [
-          Row({ mainAxisAlignment: "spaceBetween", gap: 12, style: { flexWrap: "wrap" } }, [
+          Row({ 
+            mainAxisAlignment: "spaceBetween", 
+            gap: 12, 
+            className: "mobile-column mobile-gap",
+            style: { flexWrap: "wrap", textAlign: "center" } 
+          }, [
             Text("Lumina Store", { weight: 900, color: theme.text }),
             Opacity({ opacity: 0.72 }, [
               Caption(
