@@ -1,5 +1,5 @@
 {
-  "name": "@chimuka_amel/lumina-ui",
+  "name": "@neuralumina/lumina-ui",
   "version": "0.1.1",
   "description": "A lightweight Flutter-inspired UI library for building web interfaces with plain JavaScript and the DOM.",
   "type": "module",
