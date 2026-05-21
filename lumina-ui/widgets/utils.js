@@ -61,14 +61,16 @@ export function childrenOf(children) {
   return Array.isArray(children) ? children : [children];
 }
 
-export function normalizeWidgetArgs(propsOrChildren = {}, maybeChildren = undefined) {
+export function normalizeWidgetArgs(
+  propsOrChildren = {},
+  maybeChildren = undefined,
+) {
   if (isRenderable(propsOrChildren)) {
     return [{}, childrenOf(propsOrChildren)];
   }
 
   const props = propsOrChildren || {};
-  const propChildren =
-    props.child !== undefined ? props.child : props.children;
+  const propChildren = props.child !== undefined ? props.child : props.children;
   const children =
     propChildren !== undefined && maybeChildren === undefined
       ? propChildren

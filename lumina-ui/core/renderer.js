@@ -20,7 +20,7 @@ export function mount(componentFn, container) {
       container.innerHTML = "";
       container.appendChild(dom);
     } else {
-      patchWidget(container, currentTree, newTree);
+      patchWidget(container, currentTree, newTree, 0, null, forceUpdate);
     }
     currentTree = normalizeVNode(newTree);
   }
@@ -100,7 +100,7 @@ function normalizeVNode(v) {
   return { tag: "text", children: [String(v)] };
 }
 
-function patchWidget(parent, oldWidget, newWidget, index = 0, currentDom = null) {
+function patchWidget(parent, oldWidget, newWidget, index = 0, currentDom = null, forceUpdate = null) {
   // Normalize to vnodes
   const oldV = normalizeVNode(oldWidget);
   const newV = normalizeVNode(newWidget);
@@ -119,12 +119,12 @@ function patchWidget(parent, oldWidget, newWidget, index = 0, currentDom = null)
   if (oldKey != null || newKey != null) {
     // keyed children are handled at parent's loop level — here we fall back to replace if mismatched
     if (oldKey !== newKey || oldTag !== newTag) {
-      const newDom = renderWidget(newWidget);
+      const newDom = renderWidget(newWidget, forceUpdate);
       parent.replaceChild(newDom, dom);
       return newDom;
     }
   } else if (oldTag !== newTag) {
-    const newDom = renderWidget(newWidget);
+    const newDom = renderWidget(newWidget, forceUpdate);
     parent.replaceChild(newDom, dom);
     return newDom;
   }
@@ -145,7 +145,7 @@ function patchWidget(parent, oldWidget, newWidget, index = 0, currentDom = null)
     ) {
       dom.textContent = nextText;
     } else if (dom && dom.nodeType !== Node.TEXT_NODE) {
-      const newDom = renderWidget(newWidget);
+      const newDom = renderWidget(newWidget, forceUpdate);
       parent.replaceChild(newDom, dom);
       return newDom;
     }
@@ -181,9 +181,9 @@ function patchWidget(parent, oldWidget, newWidget, index = 0, currentDom = null)
       if (nk != null && keyed.has(nk)) {
         const oldEntry = keyed.get(nk);
         usedKeys.add(nk);
-        node = patchWidget(dom, oldEntry.vnode, nc, 0, oldEntry.node);
+        node = patchWidget(dom, oldEntry.vnode, nc, 0, oldEntry.node, forceUpdate);
       } else {
-        node = renderWidget(nc);
+        node = renderWidget(nc, forceUpdate);
       }
 
       const targetNode = dom.childNodes[i] || null;
@@ -216,15 +216,15 @@ function patchWidget(parent, oldWidget, newWidget, index = 0, currentDom = null)
     if (oldEmpty && newEmpty) {
       continue;
     } else if (oldEmpty && !newEmpty) {
-      const newDom = renderWidget(newC);
+      const newDom = renderWidget(newC, forceUpdate);
       if (dom.childNodes[i]) dom.replaceChild(newDom, dom.childNodes[i]);
       else dom.insertBefore(newDom, dom.childNodes[i] || null);
     } else if (!oldEmpty && newEmpty) {
-      const emptyDom = renderWidget(newC);
+      const emptyDom = renderWidget(newC, forceUpdate);
       if (dom.childNodes[i]) dom.replaceChild(emptyDom, dom.childNodes[i]);
       else dom.insertBefore(emptyDom, dom.childNodes[i] || null);
     } else {
-      patchWidget(dom, oldC, newC, i);
+      patchWidget(dom, oldC, newC, i, null, forceUpdate);
     }
   }
 
@@ -296,7 +296,11 @@ function updateProps(dom, oldProps = {}, newProps = {}) {
       const event = normalizeEventName(key);
       dom.addEventListener(event, value);
     } else if (key === "className") {
-      dom.className = Array.isArray(value) ? value.filter(Boolean).join(" ") : value;
+      if (Array.isArray(value)) {
+        dom.className = value.filter((v) => v && typeof v === "string").join(" ");
+      } else {
+        dom.className = value ? String(value) : "";
+      }
     } else if (key === "dataset" && typeof value === "object") {
       const previous = oldProps.dataset || {};
       Object.keys(previous).forEach((k) => {

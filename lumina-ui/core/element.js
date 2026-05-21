@@ -56,8 +56,10 @@ export function createElement(tag, props = {}) {
     } else if (key === "tabIndex") {
       element.tabIndex = value;
     } else {
-      // fallback to attribute
-      element.setAttribute(key, String(value));
+      // fallback to attribute - only for primitive types
+      if (typeof value !== "object" || value === null) {
+        element.setAttribute(key, String(value));
+      }
     }
   });
 
@@ -86,7 +88,9 @@ export function Fragment({ children }) {
     const childrenArray = Array.isArray(children) ? children : [children];
     childrenArray.forEach((child) => {
       if (child instanceof Node) fragment.appendChild(child);
-      else if (child !== null && child !== undefined)
+      else if (typeof child === "object" && child._dom) {
+        fragment.appendChild(child._dom);
+      } else if (child !== null && child !== undefined)
         fragment.appendChild(document.createTextNode(String(child)));
     });
   }
