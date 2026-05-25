@@ -242,7 +242,8 @@ export function Checkbox({
 }
 
 export function Switch({
-  value = false,
+  value,
+  checked,
   onChange,
   ariaLabel,
   disabled = false,
@@ -250,17 +251,21 @@ export function Switch({
   ...props
 }) {
   ensureControlStyles();
+  const currentValue =
+    checked !== undefined ? !!checked : value !== undefined ? !!value : false;
   const base = {
     width: "46px",
     height: "24px",
     borderRadius: luminaTheme.radius.pill,
-    backgroundColor: value ? luminaTheme.colors.primary : luminaTheme.colors.track,
-    border: `1px solid ${value ? luminaTheme.colors.primary : luminaTheme.colors.borderStrong}`,
+    backgroundColor: currentValue
+      ? luminaTheme.colors.primary
+      : luminaTheme.colors.track,
+    border: `1px solid ${currentValue ? luminaTheme.colors.primary : luminaTheme.colors.borderStrong}`,
     cursor: disabled ? "not-allowed" : "pointer",
     position: "relative",
     transition: `background-color ${luminaTheme.transition}, border-color ${luminaTheme.transition}, box-shadow ${luminaTheme.transition}`,
     outline: "none",
-    boxShadow: value ? "0 8px 18px rgba(37, 99, 235, 0.16)" : "none",
+    boxShadow: currentValue ? "0 8px 18px rgba(37, 99, 235, 0.16)" : "none",
     opacity: disabled ? 0.6 : 1,
     ...style,
   };
@@ -271,21 +276,16 @@ export function Switch({
       ...props,
       role: "switch",
       type: props.type || "button",
-      "aria-checked": !!value,
+      "aria-checked": currentValue,
       "aria-label": ariaLabel || "toggle",
       disabled,
       tabIndex: 0,
       onClick: (event) => {
         if (props.onClick) props.onClick(event);
-        if (!disabled && onChange) onChange(!value);
+        if (event.defaultPrevented) return;
+        if (!disabled && onChange) onChange(!currentValue);
       },
-      onKeyDown: (e) => {
-        if (props.onKeyDown) props.onKeyDown(e);
-        if (e.key === " " || e.key === "Enter") {
-          e.preventDefault();
-          if (!disabled && onChange) onChange(!value);
-        }
-      },
+      onKeyDown: props.onKeyDown,
       style: base,
       className: ["lumina-switch", props.className].filter(Boolean).join(" "),
     },
@@ -300,7 +300,7 @@ export function Switch({
             backgroundColor: luminaTheme.colors.surface,
             position: "absolute",
             top: "1px",
-            left: value ? "22px" : "1px",
+            left: currentValue ? "22px" : "1px",
             transition: `left ${luminaTheme.transition}, transform ${luminaTheme.transition}`,
             boxShadow: "0 2px 6px rgba(15, 23, 42, 0.22)",
           },

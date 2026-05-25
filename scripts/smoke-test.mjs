@@ -228,6 +228,25 @@ disabledSwitch.props.onClick({});
 assert(disabledSwitch.props.type === "button", "switch type should be button");
 assert(switched === false, "disabled switch should not change");
 
+let switchChecked = false;
+const checkedSwitchRoot = new ElementNode("root");
+const checkedSwitchUpdate = mount(
+  () =>
+    Switch({
+      checked: switchChecked,
+      onChange: (next) => {
+        switchChecked = next;
+        checkedSwitchUpdate();
+      },
+    }),
+  checkedSwitchRoot,
+);
+checkedSwitchRoot.childNodes[0].click();
+assert(
+  checkedSwitchRoot.childNodes[0].attributes["aria-checked"] === "true",
+  "checked prop alias on Switch failed",
+);
+
 const blocked = AbsorbPointer({ style: { position: "static" } }, [Text("x")]);
 assert(blocked.props.style.position === "relative", "AbsorbPointer position failed");
 assert(blocked.children.length === 2, "AbsorbPointer overlay missing");
