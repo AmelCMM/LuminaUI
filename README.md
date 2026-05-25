@@ -185,6 +185,11 @@ The published package surface is framework-only: `lumina-ui.js`,
 `lumina-ui/core/*`, and `lumina-ui/widgets/*`. The ecommerce app remains a demo
 consumer inside the repository.
 
+## Transparency
+
+Repository debugging and maintenance may include AI-assisted analysis and
+suggestions.
+
 ## Publishing
 
 Before the first publish, make sure the `name` in `package.json` matches an npm
