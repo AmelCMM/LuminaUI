@@ -55,12 +55,21 @@ export const [getQuery, setQuery, subscribeQuery] = createState("");
 export const [getCategory, setCategory, subscribeCategory] = createState("All");
 export const [getSort, setSort, subscribeSort] = createState("featured");
 export const [getMaxPrice, setMaxPrice, subscribeMaxPrice] = createState(250);
+export const [getMinRating, setMinRating, subscribeMinRating] = createState(0);
+export const [getInStockOnly, setInStockOnly, subscribeInStockOnly] =
+  createState(false);
 export const [getCartOpen, setCartOpen, subscribeCartOpen] = createState(false);
 export const [getCheckoutOpen, setCheckoutOpen, subscribeCheckoutOpen] =
   createState(false);
 export const [getSelectedProductId, setSelectedProductId, subscribeSelected] =
   createState(null);
 export const [getCart, setCart, subscribeCart] = createState([]);
+export const [getWishlist, setWishlist, subscribeWishlist] = createState([]);
+export const [getCompareList, setCompareList, subscribeCompareList] =
+  createState([]);
+export const [getPromoCode, setPromoCode, subscribePromoCode] = createState("");
+export const [getAppliedPromo, setAppliedPromo, subscribeAppliedPromo] =
+  createState(null);
 export const [getSnack, setSnack, subscribeSnack] = createState("");
 export const [getShipping, setShipping, subscribeShipping] = createState("standard");
 export const [getPayment, setPayment, subscribePayment] = createState("card");
@@ -86,10 +95,16 @@ export const subscriptions = [
   subscribeCategory,
   subscribeSort,
   subscribeMaxPrice,
+  subscribeMinRating,
+  subscribeInStockOnly,
   subscribeCartOpen,
   subscribeCheckoutOpen,
   subscribeSelected,
   subscribeCart,
+  subscribeWishlist,
+  subscribeCompareList,
+  subscribePromoCode,
+  subscribeAppliedPromo,
   subscribeSnack,
   subscribeShipping,
   subscribePayment,
@@ -136,6 +151,18 @@ export function getCategories() {
   return categoriesFor(getProducts().filter((product) => product.active));
 }
 
+export function getVendors() {
+  return [
+    "All",
+    ...new Set(
+      getProducts()
+        .filter((product) => product.active)
+        .map((product) => product.vendor)
+        .filter(Boolean),
+    ),
+  ];
+}
+
 export function maxCatalogPrice(products = getProducts()) {
   return Math.max(50, ...products.map((product) => Number(product.price || 0)));
 }
@@ -154,6 +181,8 @@ export function filteredProducts() {
   const query = getQuery().trim().toLowerCase();
   const category = getCategory();
   const maxPrice = Number(getMaxPrice());
+  const minRating = Number(getMinRating());
+  const inStockOnly = getInStockOnly();
   const sort = getSort();
   const products = getProducts();
 
@@ -166,7 +195,16 @@ export function filteredProducts() {
       product.category.toLowerCase().includes(query) ||
       product.tags.join(" ").toLowerCase().includes(query);
     const matchesCategory = category === "All" || product.category === category;
-    return matchesQuery && matchesCategory && product.price <= maxPrice;
+    const matchesPrice = product.price <= maxPrice;
+    const matchesRating = product.rating >= minRating;
+    const matchesStock = !inStockOnly || product.stock > 0;
+    return (
+      matchesQuery &&
+      matchesCategory &&
+      matchesPrice &&
+      matchesRating &&
+      matchesStock
+    );
   });
 
   return [...filtered].sort((a, b) => {
@@ -190,14 +228,43 @@ export function cartSubtotal() {
   }, 0);
 }
 
+export function cartItemsDetailed() {
+  return getCart()
+    .map((item) => {
+      const product = getProducts().find((entry) => entry.id === item.productId);
+      return product ? { ...item, product } : null;
+    })
+    .filter(Boolean);
+}
+
+export function cartStockIssues() {
+  return cartItemsDetailed().filter((item) => item.quantity > item.product.stock);
+}
+
+export function activePromo() {
+  const promo = getAppliedPromo();
+  if (!promo) return null;
+  if (promo.minimum && cartSubtotal() < promo.minimum) return null;
+  return promo;
+}
+
+export function discountAmount() {
+  const promo = activePromo();
+  if (!promo) return 0;
+  if (promo.type === "percent") return cartSubtotal() * promo.value;
+  if (promo.type === "fixed") return Math.min(cartSubtotal(), promo.value);
+  return 0;
+}
+
 export function shippingCost() {
   if (cartSubtotal() === 0) return 0;
+  if (activePromo()?.type === "shipping") return 0;
   if (getShipping() === "express") return 18;
   return cartSubtotal() >= 180 ? 0 : 8;
 }
 
 export function orderTotal() {
-  return cartSubtotal() + shippingCost();
+  return Math.max(0, cartSubtotal() - discountAmount()) + shippingCost();
 }
 
 export function addToCart(productId, quantity = 1) {
@@ -219,7 +286,11 @@ export function addToCart(productId, quantity = 1) {
 
     return [...items, { productId, quantity: Math.min(product.stock, quantity) }];
   });
-  setSnack(`${product.name} added to cart`);
+  if (quantity > product.stock) {
+    setSnack(`Only ${product.stock} ${product.name} available`);
+  } else {
+    setSnack(`${product.name} added to cart`);
+  }
 }
 
 export function updateCartQuantity(productId, quantity) {
@@ -254,13 +325,28 @@ export function closeProduct() {
 
 export function clearCart() {
   setCart([]);
+  setAppliedPromo(null);
+  setPromoCode("");
 }
 
 export function placeOrder() {
   const cart = getCart();
   if (!cart.length) return;
+  if (!getCheckoutName().trim()) {
+    setSnack("Add a customer name before placing the order");
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(getCheckoutEmail().trim())) {
+    setSnack("Add a valid email before placing the order");
+    return;
+  }
+  if (cartStockIssues().length) {
+    setSnack("Adjust unavailable quantities before checkout");
+    return;
+  }
 
   const products = getProducts();
+  const promo = activePromo();
   const items = cart.map((item) => {
     const product = products.find((entry) => entry.id === item.productId);
     return {
@@ -282,6 +368,9 @@ export function placeOrder() {
     shipping: getShipping(),
     payment: getPayment(),
     items,
+    subtotal: cartSubtotal(),
+    discount: discountAmount(),
+    promoCode: promo?.code || "",
     total: orderTotal(),
   };
 
@@ -298,9 +387,110 @@ export function placeOrder() {
   setCheckoutName("");
   setCheckoutEmail("");
   setCheckoutNotes("");
+  setAppliedPromo(null);
+  setPromoCode("");
   setCheckoutOpen(false);
   setPage("shop");
   setSnack(`${id} placed successfully`);
+}
+
+export function toggleWishlist(productId) {
+  const product = getProducts().find((item) => item.id === productId);
+  if (!product) return;
+  const alreadySaved = getWishlist().includes(productId);
+  setWishlist((items) =>
+    items.includes(productId)
+      ? items.filter((id) => id !== productId)
+      : [...items, productId],
+  );
+  setSnack(
+    alreadySaved
+      ? `${product.name} removed from wishlist`
+      : `${product.name} saved to wishlist`,
+  );
+}
+
+export function isWishlisted(productId) {
+  return getWishlist().includes(productId);
+}
+
+export function wishlistProducts() {
+  const ids = new Set(getWishlist());
+  return getProducts().filter((product) => ids.has(product.id));
+}
+
+export function toggleCompare(productId) {
+  const product = getProducts().find((item) => item.id === productId);
+  if (!product) return;
+  const selected = getCompareList();
+  if (selected.includes(productId)) {
+    setCompareList(selected.filter((id) => id !== productId));
+    setSnack(`${product.name} removed from compare`);
+    return;
+  }
+  if (selected.length >= 3) {
+    setSnack("Compare up to 3 products");
+    return;
+  }
+  setCompareList([...selected, productId]);
+  setSnack(`${product.name} added to compare`);
+}
+
+export function isCompared(productId) {
+  return getCompareList().includes(productId);
+}
+
+export function compareProducts() {
+  const ids = new Set(getCompareList());
+  return getProducts().filter((product) => ids.has(product.id));
+}
+
+export function clearCompare() {
+  setCompareList([]);
+}
+
+export function applyPromoCode() {
+  const code = getPromoCode().trim().toUpperCase();
+  const promos = {
+    FOCUS10: {
+      code: "FOCUS10",
+      label: "10% off focused setups",
+      type: "percent",
+      value: 0.1,
+      minimum: 0,
+    },
+    FREESHIP: {
+      code: "FREESHIP",
+      label: "Free shipping",
+      type: "shipping",
+      value: 0,
+      minimum: 0,
+    },
+    WORKSPACE25: {
+      code: "WORKSPACE25",
+      label: "$25 off orders over $220",
+      type: "fixed",
+      value: 25,
+      minimum: 220,
+    },
+  };
+  const promo = promos[code];
+  if (!promo) {
+    setAppliedPromo(null);
+    setSnack("Promo code not recognized");
+    return;
+  }
+  if (promo.minimum && cartSubtotal() < promo.minimum) {
+    setSnack(`${promo.code} needs ${formatMoney(promo.minimum)} subtotal`);
+    return;
+  }
+  setAppliedPromo(promo);
+  setSnack(`${promo.label} applied`);
+}
+
+export function removePromoCode() {
+  setAppliedPromo(null);
+  setPromoCode("");
 }
 
 export function updateOrderStatus(orderId, status) {
@@ -407,6 +597,13 @@ export function adminMetrics() {
   const products = getProducts();
   const orders = getOrders();
   const revenue = orders.reduce((total, order) => total + order.total, 0);
+  const grossProfit = orders.reduce((total, order) => {
+    return total + order.items.reduce((orderTotal, item) => {
+      const product = products.find((entry) => entry.id === item.productId);
+      const cost = product ? product.cost : 0;
+      return orderTotal + (item.price - cost) * item.quantity;
+    }, 0);
+  }, 0);
   const inventoryValue = products.reduce(
     (total, product) => total + product.stock * product.cost,
     0,
@@ -416,12 +613,55 @@ export function adminMetrics() {
     revenue,
     inventoryValue,
     orders: orders.length,
+    averageOrderValue: orders.length ? revenue / orders.length : 0,
+    grossProfit,
+    marginRate: revenue ? grossProfit / revenue : 0,
     activeProducts: products.filter((product) => product.active).length,
     lowStock: products.filter(
       (product) => product.active && product.stock <= product.lowStockThreshold,
     ).length,
     processing: orders.filter((order) => order.status === "processing").length,
   };
+}
+
+export function inventoryInsights() {
+  return getProducts()
+    .filter((product) => product.active)
+    .map((product) => ({
+      ...product,
+      velocity: product.sales / Math.max(1, product.stock + product.sales),
+      margin: product.price - product.cost,
+      stockPressure:
+        product.stock <= product.lowStockThreshold
+          ? "critical"
+          : product.stock <= product.lowStockThreshold * 2
+            ? "watch"
+            : "healthy",
+    }))
+    .sort((a, b) => {
+      const rank = { critical: 0, watch: 1, healthy: 2 };
+      return rank[a.stockPressure] - rank[b.stockPressure] || b.sales - a.sales;
+    });
+}
+
+export function categoryPerformance() {
+  const products = getProducts();
+  return categoriesFor(products)
+    .filter((category) => category !== "All")
+    .map((category) => {
+      const entries = products.filter((product) => product.category === category);
+      const revenue = entries.reduce(
+        (total, product) => total + product.price * product.sales,
+        0,
+      );
+      const units = entries.reduce((total, product) => total + product.sales, 0);
+      const margin = entries.reduce(
+        (total, product) => total + (product.price - product.cost) * product.sales,
+        0,
+      );
+      return { category, revenue, units, margin };
+    })
+    .sort((a, b) => b.revenue - a.revenue);
 }
 
 export function formatMoney(value) {

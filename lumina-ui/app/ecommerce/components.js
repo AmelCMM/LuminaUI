@@ -33,16 +33,24 @@ import { Caption, Heading, RichText, Text } from "../../widgets/text.js";
 import { ensureGlobalStyle } from "../../widgets/utils.js";
 import { sortOptions } from "./data.js";
 import {
+  activePromo,
   adminMetrics,
   addToCart,
   adjustProductStock,
+  applyPromoCode,
   cartQuantity,
+  cartStockIssues,
   cartSubtotal,
+  categoryPerformance,
   closeProduct,
+  clearCompare,
+  compareProducts,
+  discountAmount,
   filteredProducts,
   formatMoney,
   getAdminDraft,
   getAdminEditingId,
+  getAppliedPromo,
   getCart,
   getCartOpen,
   getCatalogSource,
@@ -53,21 +61,30 @@ import {
   getCheckoutOpen,
   getCheckoutName,
   getCheckoutNotes,
+  getCompareList,
   getFeaturedProduct,
+  getInStockOnly,
   getInterface,
   getMaxPrice,
+  getMinRating,
   getOrders,
   getPage,
   getPayment,
   getProducts,
+  getPromoCode,
   getQuery,
   getShipping,
   getSnack,
   getSort,
+  getWishlist,
+  inventoryInsights,
+  isCompared,
+  isWishlisted,
   maxCatalogPrice,
   openProduct,
   orderTotal,
   placeOrder,
+  removePromoCode,
   removeFromCart,
   saveAdminDraft,
   setAdminDraftField,
@@ -79,9 +96,12 @@ import {
   setCheckoutName,
   setCheckoutNotes,
   setCheckoutOpen,
+  setInStockOnly,
   setMaxPrice,
+  setMinRating,
   setPage,
   setPayment,
+  setPromoCode,
   setQuery,
   setShipping,
   setSnack,
@@ -90,8 +110,11 @@ import {
   startCreateProduct,
   startEditProduct,
   toggleProductActive,
+  toggleCompare,
+  toggleWishlist,
   updateOrderStatus,
   updateCartQuantity,
+  wishlistProducts,
   deleteProduct,
 } from "./store.js";
 
@@ -192,6 +215,7 @@ function StoreAppBar() {
         : [
             NavButton("Shop", "shop"),
             NavButton("Deals", "deals"),
+            NavButton("Wishlist", "wishlist"),
             NavButton("Checkout", "checkout"),
             Button({
               text: "Admin",
@@ -341,6 +365,7 @@ function HeroSection() {
                     },
                   ],
                 }),
+                StorefrontPulse(),
                 Row({ 
                   gap: 10, 
                   className: "mobile-stack mobile-gap",
@@ -430,6 +455,39 @@ function HeroVisual() {
   );
 }
 
+function StorefrontPulse() {
+  const activeProducts = getProducts().filter((product) => product.active);
+  const averageRating =
+    activeProducts.reduce((total, product) => total + product.rating, 0) /
+    Math.max(1, activeProducts.length);
+
+  return Wrap({ gap: 10, className: "mobile-gap" }, [
+    PulsePill(`${activeProducts.length} live SKUs`, "Catalog"),
+    PulsePill(`${averageRating.toFixed(1)} avg rating`, "Signal"),
+    PulsePill(`${getWishlist().length} saved`, "Wishlist"),
+    PulsePill(`${getCompareList().length}/3 comparing`, "Compare"),
+  ]);
+}
+
+function PulsePill(value, label) {
+  return Container(
+    {
+      padding: { vertical: 8, horizontal: 10 },
+      decoration: {
+        color: theme.surfaceAlt,
+        border: `1px solid ${theme.border}`,
+        borderRadius: 999,
+      },
+    },
+    [
+      Row({ gap: 8 }, [
+        Text(value, { color: theme.text, weight: 900, size: 13 }),
+        Caption({ color: theme.muted }, label),
+      ]),
+    ],
+  );
+}
+
 function MainContent() {
   return Container(
     {
@@ -451,6 +509,7 @@ function MainContent() {
             Expanded([
               Column({ gap: 16 }, [
                 Toolbar(),
+                CompareTray(),
                 ProductGrid(),
               ]),
             ]),
@@ -473,6 +532,7 @@ function AdminInterface() {
           Column({ gap: 18 }, [
             AdminHeader(),
             AdminMetrics(),
+            AdminIntelligence(),
             Row({ 
               gap: 18, 
               className: "mobile-column",
@@ -541,6 +601,8 @@ function AdminMetrics() {
     gap: 12,
     items: [
       ["Revenue", formatMoney(metrics.revenue), "Across all orders"],
+      ["Gross profit", formatMoney(metrics.grossProfit), `${Math.round(metrics.marginRate * 100)}% blended margin`],
+      ["AOV", formatMoney(metrics.averageOrderValue), "Average order value"],
       ["Orders", String(metrics.orders), `${metrics.processing} processing`],
       ["Active products", String(metrics.activeProducts), `${getProducts().length} total SKUs`],
       ["Low stock", String(metrics.lowStock), "Needs attention"],
@@ -561,6 +623,102 @@ function MetricCard(label, value, detail) {
       ]),
     ],
   );
+}
+
+function AdminIntelligence() {
+  return GridView({ minColumnWidth: 260, gap: 12 }, [
+    InventoryRiskPanel(),
+    FulfillmentPanel(),
+    CategoryPerformancePanel(),
+  ]);
+}
+
+function InventoryRiskPanel() {
+  const insights = inventoryInsights();
+  const urgent = insights.filter((product) => product.stockPressure !== "healthy");
+  const items = urgent.length ? urgent.slice(0, 4) : insights.slice(0, 4);
+
+  return Card(
+    { padding: 16, style: { borderColor: theme.border } },
+    [
+      Column({ gap: 12 }, [
+        PanelHeader("Inventory radar", `${urgent.length} SKUs need review`),
+        ...items.map((product) =>
+          InsightRow(
+            product.name,
+            `${product.stock} left · ${formatMoney(product.margin)} margin`,
+            product.stockPressure === "critical" ? theme.danger : theme.warning,
+          ),
+        ),
+      ]),
+    ],
+  );
+}
+
+function FulfillmentPanel() {
+  const orders = getOrders();
+  const statuses = ["processing", "packed", "shipped", "delivered", "cancelled"];
+  return Card(
+    { padding: 16, style: { borderColor: theme.border } },
+    [
+      Column({ gap: 12 }, [
+        PanelHeader("Fulfillment flow", `${orders.length} active records`),
+        ...statuses.map((status) =>
+          InsightRow(
+            statusLabel(status),
+            `${orders.filter((order) => order.status === status).length} orders`,
+            statusColor(status),
+          ),
+        ),
+      ]),
+    ],
+  );
+}
+
+function CategoryPerformancePanel() {
+  const categories = categoryPerformance().slice(0, 4);
+  return Card(
+    { padding: 16, style: { borderColor: theme.border } },
+    [
+      Column({ gap: 12 }, [
+        PanelHeader("Category velocity", "Sales-weighted catalog view"),
+        ...categories.map((entry) =>
+          InsightRow(
+            entry.category,
+            `${formatMoney(entry.revenue)} · ${entry.units} units`,
+            theme.primary,
+          ),
+        ),
+      ]),
+    ],
+  );
+}
+
+function PanelHeader(title, detail) {
+  return Column({ gap: 3 }, [
+    Text(title, { color: theme.text, weight: 900, size: 16 }),
+    Caption({ color: theme.muted }, detail),
+  ]);
+}
+
+function InsightRow(label, detail, color) {
+  return Row({ mainAxisAlignment: "spaceBetween", gap: 10 }, [
+    Column({ gap: 2, style: { minWidth: 0 } }, [
+      Text(label, { color: theme.text, weight: 800, maxLines: 1 }),
+      Caption({ color: theme.muted }, detail),
+    ]),
+    Container(
+      {
+        width: 10,
+        height: 10,
+        decoration: {
+          color,
+          borderRadius: 999,
+        },
+      },
+      [],
+    ),
+  ]);
 }
 
 function ProductAdminPanel() {
@@ -891,6 +1049,12 @@ function statusColor(status) {
   return theme.warning;
 }
 
+function statusLabel(status) {
+  return String(status || "")
+    .replace(/-/g, " ")
+    .replace(/^\w/, (letter) => letter.toUpperCase());
+}
+
 function FilterPanel() {
   return Card(
     {
@@ -948,6 +1112,30 @@ function FilterPanel() {
             onChange: setMaxPrice,
           }),
         ]),
+        Column({ gap: 8 }, [
+          Row({ mainAxisAlignment: "spaceBetween" }, [
+            Caption({ color: theme.muted }, "Minimum rating"),
+            Caption({ color: theme.text }, `${Number(getMinRating()).toFixed(1)}+`),
+          ]),
+          Slider({
+            value: getMinRating(),
+            min: 0,
+            max: 5,
+            step: 0.5,
+            onChange: setMinRating,
+          }),
+        ]),
+        Row({ mainAxisAlignment: "spaceBetween", gap: 12 }, [
+          Column({ gap: 2 }, [
+            Text("In-stock only", { color: theme.text, weight: 800 }),
+            Caption({ color: theme.muted }, "Hide sold out SKUs"),
+          ]),
+          Switch({
+            checked: getInStockOnly(),
+            ariaLabel: "Filter in-stock products",
+            onChange: setInStockOnly,
+          }),
+        ]),
         Dropdown({
           value: getSort(),
           onChange: setSort,
@@ -966,6 +1154,16 @@ function FilterPanel() {
 
 function Toolbar() {
   const page = getPage();
+  const title =
+    page === "deals"
+      ? "Current deals"
+      : page === "wishlist"
+        ? "Saved products"
+        : "Product catalog";
+  const detail =
+    page === "wishlist"
+      ? `${wishlistProducts().length} saved products ready for review.`
+      : "Browse Lumina Store products built with LuminaUI widgets.";
   return Row({ 
     gap: 12, 
     mainAxisAlignment: "spaceBetween", 
@@ -975,11 +1173,11 @@ function Toolbar() {
     Column({ gap: 3 }, [
       Heading(
         { level: 2, style: { color: theme.text } },
-        page === "deals" ? "Current deals" : "Product catalog",
+        title,
       ),
       Caption(
         { color: theme.muted },
-        "Browse Lumina Store products built with LuminaUI widgets.",
+        detail,
       ),
     ]),
     Row({ 
@@ -990,13 +1188,15 @@ function Toolbar() {
       Button({
         text: "Clear filters",
         variant: "text",
-        onClick: () => {
-          setQuery("");
-          setCategory("All");
-          setMaxPrice(250);
-          setSort("featured");
-          setPage("shop");
-        },
+          onClick: () => {
+            setQuery("");
+            setCategory("All");
+            setMaxPrice(250);
+            setMinRating(0);
+            setInStockOnly(false);
+            setSort("featured");
+            setPage("shop");
+          },
       }),
       Button({
         text: "Checkout",
@@ -1007,14 +1207,73 @@ function Toolbar() {
   ]);
 }
 
+function CompareTray() {
+  const products = compareProducts();
+  if (!products.length) return null;
+
+  return Card(
+    { padding: 14, style: { borderColor: "#bfdbfe", backgroundColor: "#eff6ff" } },
+    [
+      Column({ gap: 12 }, [
+        Row({
+          mainAxisAlignment: "spaceBetween",
+          gap: 10,
+          className: "mobile-column",
+          style: { alignItems: "center" }
+        }, [
+          Column({ gap: 2 }, [
+            Text("Compare bench", { color: theme.text, weight: 900 }),
+            Caption({ color: theme.muted }, `${products.length} of 3 products selected`),
+          ]),
+          Button({
+            text: "Clear compare",
+            variant: "text",
+            onClick: clearCompare,
+            style: { color: theme.primary },
+          }),
+        ]),
+        GridView({
+          items: products,
+          minColumnWidth: 180,
+          gap: 10,
+          itemBuilder: (product) =>
+            Container(
+              {
+                key: product.id,
+                padding: 10,
+                decoration: {
+                  color: "#ffffff",
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 8,
+                },
+              },
+              [
+                Column({ gap: 6 }, [
+                  Text(product.name, { color: theme.text, weight: 900, maxLines: 1 }),
+                  Caption({ color: theme.muted }, product.category),
+                  SummaryRow("Price", formatMoney(product.price)),
+                  SummaryRow("Rating", `${product.rating}`),
+                  SummaryRow("Stock", `${product.stock}`),
+                ]),
+              ],
+            ),
+        }),
+      ]),
+    ],
+  );
+}
+
 function ProductGrid() {
+  const page = getPage();
   const items =
-    getPage() === "deals"
-      ? filteredProducts().filter((product) => product.price <= 150)
-      : filteredProducts();
+    page === "wishlist"
+      ? wishlistProducts().filter((product) => product.active)
+      : page === "deals"
+        ? filteredProducts().filter((product) => product.price <= 150)
+        : filteredProducts();
 
   if (!items.length) {
-    return EmptyProducts();
+    return page === "wishlist" ? EmptyWishlist() : EmptyProducts();
   }
 
   return GridView({
@@ -1045,7 +1304,36 @@ function EmptyProducts() {
   );
 }
 
+function EmptyWishlist() {
+  return Card(
+    {
+      style: {
+        borderColor: theme.border,
+        minHeight: "260px",
+      },
+    },
+    [
+      Center([
+        Column({ gap: 10, style: { textAlign: "center" } }, [
+          Icon({ name: "star", size: 34, color: theme.muted }),
+          Text("No saved products yet", { weight: 900, color: theme.text }),
+          Caption({ color: theme.muted }, "Save products from the catalog to compare later."),
+          Button({
+            text: "Browse catalog",
+            onClick: () => setPage("shop"),
+            style: { backgroundColor: theme.primary, color: "#ffffff" },
+          }),
+        ]),
+      ]),
+    ],
+  );
+}
+
 function ProductCard(product) {
+  const saved = isWishlisted(product.id);
+  const compared = isCompared(product.id);
+  const low = product.stock <= product.lowStockThreshold;
+
   return Card(
     {
       key: product.id,
@@ -1094,9 +1382,14 @@ function ProductCard(product) {
               }),
             ]),
             Caption(
-              { color: theme.muted },
+              { color: low ? theme.warning : theme.muted },
               `${product.category} · ${product.color} · ${product.stock} in stock`,
             ),
+            Row({ gap: 8, className: "mobile-stack", style: { flexWrap: "wrap" } }, [
+              DetailPill("Rating", `${product.rating}`),
+              DetailPill("Vendor", product.vendor),
+              low ? StatusPill("Low stock", theme.warning) : StatusPill("Ready", theme.accent),
+            ]),
             Text(product.description, {
               color: theme.muted,
               maxLines: 2,
@@ -1128,6 +1421,34 @@ function ProductCard(product) {
                   color: theme.text,
                 },
               }),
+            ]),
+            Row({ gap: 8, className: "mobile-column mobile-gap" }, [
+              Expanded([
+                Button({
+                  text: saved ? "Saved" : "Save",
+                  variant: saved ? "primary" : "secondary",
+                  onClick: () => toggleWishlist(product.id),
+                  style: {
+                    width: "100%",
+                    backgroundColor: saved ? theme.accent : "#ffffff",
+                    borderColor: saved ? theme.accent : theme.border,
+                    color: saved ? "#ffffff" : theme.text,
+                  },
+                }),
+              ]),
+              Expanded([
+                Button({
+                  text: compared ? "Comparing" : "Compare",
+                  variant: compared ? "primary" : "secondary",
+                  onClick: () => toggleCompare(product.id),
+                  style: {
+                    width: "100%",
+                    backgroundColor: compared ? theme.primary : "#ffffff",
+                    borderColor: compared ? theme.primary : theme.border,
+                    color: compared ? "#ffffff" : theme.text,
+                  },
+                }),
+              ]),
             ]),
           ]),
         ]),
@@ -1242,6 +1563,7 @@ export function CartDrawer() {
 function CartItem(item) {
   const product = getProducts().find((entry) => entry.id === item.productId);
   if (!product) return null;
+  const overStock = item.quantity > product.stock;
 
   return Dismissible(
     {
@@ -1284,7 +1606,12 @@ function CartItem(item) {
                   color: theme.primary,
                 }),
               ]),
-              Caption({ color: theme.muted }, product.color),
+              Caption(
+                { color: overStock ? theme.danger : theme.muted },
+                overStock
+                  ? `Only ${product.stock} available`
+                  : `${product.color} · ${product.stock} available`,
+              ),
               Row({ 
                 gap: 8, 
                 className: "mobile-stack mobile-gap",
@@ -1301,6 +1628,7 @@ function CartItem(item) {
                 Button({
                   text: "+",
                   variant: "secondary",
+                  disabled: item.quantity >= product.stock,
                   onClick: () =>
                     updateCartQuantity(product.id, item.quantity + 1),
                   style: { padding: "4px 9px" },
@@ -1324,6 +1652,9 @@ function CartItem(item) {
 
 function CartSummary() {
   const subtotal = cartSubtotal();
+  const promo = activePromo();
+  const discount = discountAmount();
+  const stockIssues = cartStockIssues();
   return Container(
     {
       padding: 18,
@@ -1334,13 +1665,33 @@ function CartSummary() {
     },
     [
       Column({ gap: 10 }, [
+        stockIssues.length
+          ? Container(
+              {
+                padding: 10,
+                decoration: {
+                  color: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: 8,
+                },
+              },
+              [
+                Caption(
+                  { color: theme.danger },
+                  "Some cart quantities exceed available stock.",
+                ),
+              ],
+            )
+          : null,
+        PromoBox(),
         SummaryRow("Subtotal", formatMoney(subtotal)),
+        discount ? SummaryRow(promo?.code || "Discount", `-${formatMoney(discount)}`) : null,
         SummaryRow("Shipping", subtotal >= 180 ? "Free" : formatMoney(shippingCost())),
         Divider({ color: theme.border }),
         SummaryRow("Total", formatMoney(orderTotal()), true),
         Button({
           text: "Checkout",
-          disabled: subtotal === 0,
+          disabled: subtotal === 0 || stockIssues.length > 0,
           onClick: () => {
             setCartOpen(false);
             setCheckoutOpen(true);
@@ -1351,6 +1702,58 @@ function CartSummary() {
             color: "#ffffff",
           },
         }),
+      ]),
+    ],
+  );
+}
+
+function PromoBox() {
+  const promo = getAppliedPromo();
+  return Container(
+    {
+      padding: 10,
+      decoration: {
+        color: theme.surface,
+        border: `1px solid ${theme.border}`,
+        borderRadius: 8,
+      },
+    },
+    [
+      Column({ gap: 8 }, [
+        Row({ mainAxisAlignment: "spaceBetween", gap: 8 }, [
+          Text("Promo code", { color: theme.text, weight: 800 }),
+          promo
+            ? Button({
+                text: "Remove",
+                variant: "text",
+                onClick: removePromoCode,
+                style: { padding: "4px 6px", color: theme.danger },
+              })
+            : null,
+        ]),
+        Row({ gap: 8, className: "mobile-column" }, [
+          Expanded([
+            Input({
+              value: getPromoCode(),
+              onChange: setPromoCode,
+              placeholder: "FOCUS10",
+              style: { borderColor: theme.border },
+            }),
+          ]),
+          Button({
+            text: promo ? "Applied" : "Apply",
+            disabled: !getPromoCode().trim(),
+            onClick: applyPromoCode,
+            style: {
+              backgroundColor: promo ? theme.accent : theme.primary,
+              color: "#ffffff",
+            },
+          }),
+        ]),
+        Caption(
+          { color: theme.muted },
+          promo ? promo.label : "Try FOCUS10, FREESHIP, or WORKSPACE25.",
+        ),
       ]),
     ],
   );
@@ -1490,6 +1893,10 @@ function DetailPill(label, value) {
 }
 
 export function CheckoutDialog() {
+  const discount = discountAmount();
+  const promo = activePromo();
+  const stockIssues = cartStockIssues();
+
   return Dialog(
     {
       open: getCheckoutOpen(),
@@ -1589,6 +1996,25 @@ export function CheckoutDialog() {
                   ]),
                 ]),
               ]),
+              PromoBox(),
+              stockIssues.length
+                ? Container(
+                    {
+                      padding: 12,
+                      decoration: {
+                        color: "#fef2f2",
+                        border: "1px solid #fecaca",
+                        borderRadius: 8,
+                      },
+                    },
+                    [
+                      Caption(
+                        { color: theme.danger },
+                        "Resolve stock issues in cart before placing the order.",
+                      ),
+                    ],
+                  )
+                : null,
               Container(
                 {
                   padding: 14,
@@ -1601,6 +2027,9 @@ export function CheckoutDialog() {
                 [
                   Column({ gap: 8 }, [
                     SummaryRow("Subtotal", formatMoney(cartSubtotal())),
+                    discount
+                      ? SummaryRow(promo?.code || "Discount", `-${formatMoney(discount)}`)
+                      : null,
                     SummaryRow("Shipping", formatMoney(shippingCost())),
                     SummaryRow("Total", formatMoney(orderTotal()), true),
                   ]),
@@ -1623,7 +2052,7 @@ export function CheckoutDialog() {
                 Button({
                   text: "Place order",
                   type: "submit",
-                  disabled: cartQuantity() === 0,
+                  disabled: cartQuantity() === 0 || stockIssues.length > 0,
                   style: {
                     backgroundColor: theme.primary,
                     color: "#ffffff",

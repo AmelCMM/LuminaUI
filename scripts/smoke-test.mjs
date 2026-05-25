@@ -179,6 +179,7 @@ const {
   Text,
   mount,
 } = await import("../lumina-ui.js");
+const store = await import("../lumina-ui/app/ecommerce/store.js");
 
 let items = [{ id: "a" }, { id: "b" }];
 let clicks = 0;
@@ -246,6 +247,23 @@ assert(
   checkedSwitchRoot.childNodes[0].attributes["aria-checked"] === "true",
   "checked prop alias on Switch failed",
 );
+
+store.toggleWishlist("pulse-headphones");
+assert(store.isWishlisted("pulse-headphones"), "wishlist toggle failed");
+store.toggleWishlist("pulse-headphones");
+assert(!store.isWishlisted("pulse-headphones"), "wishlist removal failed");
+
+store.toggleCompare("pulse-headphones");
+store.toggleCompare("arc-speaker");
+assert(store.compareProducts().length === 2, "compare selection failed");
+store.clearCompare();
+assert(store.compareProducts().length === 0, "compare clear failed");
+
+store.addToCart("pulse-headphones", 1);
+store.setPromoCode("FOCUS10");
+store.applyPromoCode();
+assert(store.discountAmount() > 0, "promo discount failed");
+store.clearCart();
 
 const blocked = AbsorbPointer({ style: { position: "static" } }, [Text("x")]);
 assert(blocked.props.style.position === "relative", "AbsorbPointer position failed");
