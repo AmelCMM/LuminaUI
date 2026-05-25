@@ -30,6 +30,14 @@ function emptyDraft() {
   };
 }
 
+function parseDraftNumber(value, { integer = false, min = 0, max = Infinity } = {}) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  let normalized = integer ? Math.round(parsed) : parsed;
+  normalized = Math.max(min, Math.min(max, normalized));
+  return normalized;
+}
+
 export const [getProducts, setProducts, subscribeProducts] = createState(
   initialCatalog.products,
 );
@@ -349,14 +357,28 @@ export function saveAdminDraft() {
     return;
   }
 
+  const price = parseDraftNumber(draft.price, { min: 0 });
+  const cost = parseDraftNumber(draft.cost, { min: 0 });
+  const stock = parseDraftNumber(draft.stock, { integer: true, min: 0 });
+  const rating = parseDraftNumber(draft.rating, { min: 0, max: 5 });
+  const lowStockThreshold = parseDraftNumber(draft.lowStockThreshold, {
+    integer: true,
+    min: 0,
+  });
+
+  if (price === null || cost === null || stock === null || rating === null || lowStockThreshold === null) {
+    setSnack("Numeric fields must contain valid numbers");
+    return;
+  }
+
   const product = normalizeProduct({
     ...draft,
     id,
-    price: Number(draft.price),
-    cost: Number(draft.cost),
-    stock: Number(draft.stock),
-    rating: Number(draft.rating),
-    lowStockThreshold: Number(draft.lowStockThreshold),
+    price,
+    cost,
+    stock,
+    rating,
+    lowStockThreshold,
     tags: String(draft.tags || "")
       .split(",")
       .map((tag) => tag.trim())

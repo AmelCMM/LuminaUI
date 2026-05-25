@@ -30,6 +30,7 @@ import { Dismissible } from "../../widgets/interaction.js";
 import { AppBar, Drawer, Scaffold } from "../../widgets/navigation.js";
 import { GridView, ListView, SingleChildScrollView } from "../../widgets/scrolling.js";
 import { Caption, Heading, RichText, Text } from "../../widgets/text.js";
+import { ensureGlobalStyle } from "../../widgets/utils.js";
 import { sortOptions } from "./data.js";
 import {
   adminMetrics,
@@ -130,7 +131,12 @@ const responsiveCSS = `
 }
 `;
 
+function ensureStoreStyles() {
+  ensureGlobalStyle("lumina-store-responsive", responsiveCSS);
+}
+
 export function StoreShell() {
+  ensureStoreStyles();
   const admin = getInterface() === "admin";
   return Scaffold({
     appBar: StoreAppBar(),
@@ -142,7 +148,6 @@ export function StoreShell() {
       child: admin ? AdminInterface() : Column([
         HeroSection(),
         MainContent(),
-        Footer(),
       ]),
     }),
     drawer: admin ? null : CartDrawer(),
@@ -838,6 +843,7 @@ function OrderAdminCard(order) {
             Dropdown({
               value: order.status,
               onChange: (status) => updateOrderStatus(order.id, status),
+              className: "mobile-full-width",
               options: [
                 { label: "Processing", value: "processing" },
                 { label: "Packed", value: "packed" },
@@ -845,7 +851,7 @@ function OrderAdminCard(order) {
                 { label: "Delivered", value: "delivered" },
                 { label: "Cancelled", value: "cancelled" },
               ],
-              style: { width: 150, borderColor: theme.border, className: "mobile-full-width" },
+              style: { width: 150, borderColor: theme.border },
             }),
           ]),
         ]),

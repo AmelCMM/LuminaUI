@@ -12,10 +12,16 @@ export function GestureDetector(
 ) {
   const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
   let longPressTimer = null;
+  let removePointerListeners = null;
+
   const clearLongPress = () => {
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       longPressTimer = null;
+    }
+    if (removePointerListeners) {
+      removePointerListeners();
+      removePointerListeners = null;
     }
   };
 
@@ -38,8 +44,28 @@ export function GestureDetector(
         if (props.onPanStart) props.onPanStart(event);
         if (props.onLongPress) {
           clearLongPress();
+          const pointerId = event.pointerId;
+          const target = event.currentTarget || event.target;
+          if (typeof window !== "undefined" && window.addEventListener) {
+            const onPointerDone = (pointerEvent) => {
+              if (pointerId == null || pointerEvent.pointerId === pointerId) {
+                clearLongPress();
+              }
+            };
+            window.addEventListener("pointerup", onPointerDone, true);
+            window.addEventListener("pointercancel", onPointerDone, true);
+            removePointerListeners = () => {
+              window.removeEventListener("pointerup", onPointerDone, true);
+              window.removeEventListener("pointercancel", onPointerDone, true);
+            };
+          }
           longPressTimer = setTimeout(() => {
             longPressTimer = null;
+            if (removePointerListeners) {
+              removePointerListeners();
+              removePointerListeners = null;
+            }
+            if (target && target.isConnected === false) return;
             props.onLongPress(event);
           }, props.longPressDelay ?? 500);
         }

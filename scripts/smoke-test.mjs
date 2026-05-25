@@ -232,6 +232,31 @@ const blocked = AbsorbPointer({ style: { position: "static" } }, [Text("x")]);
 assert(blocked.props.style.position === "relative", "AbsorbPointer position failed");
 assert(blocked.children.length === 2, "AbsorbPointer overlay missing");
 
+let rootArray = ["a", "b"];
+const fragmentRoot = new ElementNode("root");
+const fragmentUpdate = mount(() => rootArray, fragmentRoot);
+rootArray = ["c", "d"];
+fragmentUpdate();
+assert(fragmentRoot.textContent === "cd", "root fragment update failed");
+
+let nestedClicks = 0;
+let missingForceUpdate = 0;
+function Child(forceUpdate) {
+  return Button({
+    text: "Child",
+    onClick: () => {
+      if (typeof forceUpdate !== "function") missingForceUpdate += 1;
+      else nestedClicks += 1;
+    },
+  });
+}
+const nestedRoot = new ElementNode("root");
+const nestedUpdate = mount(() => Column([Child]), nestedRoot);
+nestedUpdate();
+nestedRoot.childNodes[0].childNodes[0].click();
+assert(missingForceUpdate === 0, "nested function widget lost forceUpdate");
+assert(nestedClicks === 1, "nested function widget click failed");
+
 let snackOpen = true;
 const stackRoot = new ElementNode("root");
 const stackUpdate = mount(

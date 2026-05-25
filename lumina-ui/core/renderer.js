@@ -6,23 +6,34 @@ import { createElement } from "./element.js";
 export function mount(componentFn, container) {
   let currentTree = null;
   let mounted = true;
+  const cleanupFns = new Set();
 
   const forceUpdate = () => {
     if (!mounted) return;
     render();
   };
+  forceUpdate.onUnmount = (cleanup) => {
+    if (typeof cleanup !== "function") return () => {};
+    cleanupFns.add(cleanup);
+    return () => cleanupFns.delete(cleanup);
+  };
 
   function render() {
-    const newTree =
+    const rawTree =
       typeof componentFn === "function" ? componentFn(forceUpdate) : componentFn;
+    const newTree = resolveWidget(rawTree, forceUpdate);
     if (!currentTree) {
+      const dom = renderWidget(newTree, forceUpdate);
+      container.innerHTML = "";
+      container.appendChild(dom);
+    } else if (isRootFragment(currentTree) || isRootFragment(newTree)) {
       const dom = renderWidget(newTree, forceUpdate);
       container.innerHTML = "";
       container.appendChild(dom);
     } else {
       patchWidget(container, currentTree, newTree, 0, null, forceUpdate);
     }
-    currentTree = normalizeVNode(newTree);
+    currentTree = newTree;
   }
 
   render();
@@ -32,6 +43,14 @@ export function mount(componentFn, container) {
   };
   wrappedForce.unmount = () => {
     mounted = false;
+    cleanupFns.forEach((cleanup) => {
+      try {
+        cleanup();
+      } catch (e) {
+        /* swallow */
+      }
+    });
+    cleanupFns.clear();
     container.innerHTML = "";
   };
 
@@ -85,12 +104,16 @@ function renderWidget(widget, forceUpdate) {
   return document.createTextNode("");
 }
 
-function normalizeVNode(v) {
-  // If given a function, call it (no forceUpdate)
-  if (typeof v === "function") v = v();
+function normalizeVNode(v, forceUpdate = null) {
+  if (typeof v === "function") v = v(forceUpdate);
   if (isEmptyWidget(v)) return { tag: "empty", children: [] };
   if (Array.isArray(v))
-    return { tag: "fragment", children: flattenChildren(v).map(normalizeVNode) };
+    return {
+      tag: "fragment",
+      children: flattenChildren(v).map((child) =>
+        normalizeVNode(child, forceUpdate),
+      ),
+    };
   if (v && v.tag) {
     return {
       ...v,
@@ -102,8 +125,8 @@ function normalizeVNode(v) {
 
 function patchWidget(parent, oldWidget, newWidget, index = 0, currentDom = null, forceUpdate = null) {
   // Normalize to vnodes
-  const oldV = normalizeVNode(oldWidget);
-  const newV = normalizeVNode(newWidget);
+  const oldV = normalizeVNode(oldWidget, forceUpdate);
+  const newV = normalizeVNode(newWidget, forceUpdate);
 
   const dom = currentDom || parent.childNodes[index];
   if (!dom) return;
@@ -343,6 +366,31 @@ function flattenChildren(children = []) {
   });
 
   return output;
+}
+
+function resolveWidget(widget, forceUpdate) {
+  if (typeof widget === "function") {
+    return resolveWidget(widget(forceUpdate), forceUpdate);
+  }
+
+  if (Array.isArray(widget)) {
+    return flattenChildren(widget).map((child) => resolveWidget(child, forceUpdate));
+  }
+
+  if (widget && widget.tag) {
+    return {
+      ...widget,
+      children: flattenChildren(widget.children || []).map((child) =>
+        resolveWidget(child, forceUpdate),
+      ),
+    };
+  }
+
+  return widget;
+}
+
+function isRootFragment(widget) {
+  return normalizeVNode(widget).tag === "fragment";
 }
 
 function widgetKey(widget) {
