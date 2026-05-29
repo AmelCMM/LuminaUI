@@ -139,9 +139,12 @@ LuminaUI/
     │       └── store.js
     ├── core/
     │   ├── element.js
+    │   ├── errors.js
+    │   ├── handlers.js
     │   ├── renderer.js
     │   └── state.js
     └── widgets/
+        ├── devtools.js
         ├── animation.js
         ├── accessibility.js
         ├── controls.js
@@ -169,9 +172,11 @@ LuminaUI/
 - `lumina-ui/app/App.js`: local demo application showing how widgets are used.
 - `lumina-ui/app/ecommerce/*`: advanced ecommerce demo app. It is intentionally
   not exported from the package entry point.
-- `lumina-ui/core/renderer.js`: `mount()` and DOM patching.
-- `lumina-ui/core/state.js`: `createState`, `useEffect`, and `createStore`.
+- `lumina-ui/core/renderer.js`: `mount()` and DOM patching with integrated error capture.
+- `lumina-ui/core/state.js`: `createState`, `useEffect`, and `createStore` with integrated error capture.
 - `lumina-ui/core/element.js`: low-level DOM element creation.
+- `lumina-ui/core/errors.js`: `ErrorBus` singleton — captures render, state, effect, event, and unhandled errors with global `onerror`/`unhandledrejection` listeners.
+- `lumina-ui/core/handlers.js`: shared event handler wrapping utilities backed by a `WeakMap` for reliable cleanup.
 - `lumina-ui/widgets/*`: widget modules grouped by purpose.
 
 ## Package Scripts
@@ -1506,6 +1511,36 @@ PopupMenuButton({
 })
 ```
 
+### DevTools
+
+Import:
+
+```js
+import { DevTools, errorBus } from "./lumina-ui.js";
+```
+
+`DevTools` is a runtime error inspection overlay. It listens to the `ErrorBus`
+singleton and displays a floating button (bottom-left) with an error count badge.
+Clicking it opens a panel showing each error's source badge (`render`, `state`,
+`effect`, `event`, or `crash`), timestamp, message, and expandable stack trace.
+Individual entries can be dismissed; a "Clear all" button resets the list.
+
+```js
+DevTools({
+  open: devToolsOpen(),
+  onOpenChange: setDevToolsOpen,
+  maxErrors: 50,
+})
+```
+
+`ErrorBus` is also available directly for programmatic access:
+
+```js
+errorBus.subscribe((entry) => console.log(entry));
+errorBus.clear();
+errorBus.getEntries();
+```
+
 ### Data Widgets
 
 Import:
@@ -1817,8 +1852,8 @@ DOM nodes aligned when arrays change.
 - checkout form with shipping and payment choices that creates demo orders
 - an admin interface for inventory, publish status, product editing, order
   status updates, and dashboard metrics
-- snackbars, dialogs, navigation, scrolling, forms, display widgets, and layout
-  primitives working together
+- snackbars, dialogs, navigation, scrolling, forms, display widgets, layout
+  primitives, and the DevTools error overlay working together
 
 Use it as a living playground for new widgets.
 
@@ -1904,6 +1939,9 @@ Completed:
 - Advanced selection widgets: `ComboBox`, `Autocomplete`
 - Animation widgets: `AnimatedContainer`, `AnimatedOpacity`, `AnimatedScale`,
   `AnimatedSlide`, `AnimatedSwitcher`
+- DevTools: `DevTools` overlay widget and `ErrorBus` error capture singleton
+- Error handling: global `onerror`/`unhandledrejection` listeners, try/catch
+  wrappers in render, patch, state, effect, and event handlers
 
 Next:
 
