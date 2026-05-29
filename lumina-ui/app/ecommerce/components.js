@@ -1835,8 +1835,9 @@ function SummaryRow(label, value, strong = false) {
 
 export function ProductDialog() {
   const product = selectedProduct();
+  if (!product) return null;
 
-  return Overlay({ open: !!product, modal: true, onDismiss: closeProduct }, [
+  return Overlay({ open: true, modal: true, onDismiss: closeProduct }, [
     Row({ 
       className: "mobile-column",
       style: { flexWrap: "wrap", alignItems: "stretch" } 

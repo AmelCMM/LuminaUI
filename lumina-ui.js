@@ -1,4 +1,5 @@
 export { mount } from "./lumina-ui/core/renderer.js";
+export { errorBus } from "./lumina-ui/core/errors.js";
 export {
   createState as useState,
   useEffect,
@@ -172,25 +173,3 @@ export {
   IgnorePointer,
 } from "./lumina-ui/widgets/interaction.js";
 
-/*
-export default {
-  mount,
-  useState: createState,
-  useEffect,
-  createStore,
-  Column,
-  Row,
-  Container,
-  Center,
-  Expanded,
-  Padding,
-  Button,
-  Input,
-  Checkbox,
-  Switch,
-  Text,
-  Heading,
-  Caption,
-  App,
-};
-*/

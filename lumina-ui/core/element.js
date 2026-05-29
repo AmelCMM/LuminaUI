@@ -1,32 +1,30 @@
+import { addWrappedListener, removeWrappedListener } from "./handlers.js";
+
 export function createElement(tag, props = {}) {
   const { children, style, className, dataset, key, ...rest } = props;
   const element = document.createElement(tag);
 
-  // Apply classes
   if (className) {
     if (Array.isArray(className)) element.classList.add(...className);
     else element.className = className;
   }
 
-  // Apply dataset
   if (dataset && typeof dataset === "object") {
     Object.keys(dataset).forEach((k) => {
       element.dataset[k] = dataset[k];
     });
   }
 
-  // Apply styles
   if (style && typeof style === "object") {
     setStyleObject(element, style);
   }
 
-  // Apply remaining props (reflecting properties for common DOM props)
   Object.entries(rest).forEach(([key, value]) => {
     if (value === undefined || value === null) return;
 
     if (key.startsWith("on") && typeof value === "function") {
       const event = normalizeEventName(key);
-      element.addEventListener(event, value);
+      addWrappedListener(element, event, value);
     } else if (
       key === "checked" ||
       key === "value" ||

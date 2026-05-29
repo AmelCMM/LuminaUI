@@ -2,6 +2,8 @@ import { Column } from "../../widgets/layout.js";
 import { ThemeProvider, createTheme } from "../../widgets/theme.js";
 import { Footer, ProductDialog, StoreShell, StoreSnackBar, CheckoutDialog } from "./components.js";
 import { ensureCatalogLoaded, subscriptions } from "./store.js";
+import { DevTools } from "../../widgets/devtools.js";
+import { createState } from "../../core/state.js";
 
 const storeTheme = createTheme({
   colors: {
@@ -16,6 +18,8 @@ const storeTheme = createTheme({
     borderStrong: "#d1d5db",
   },
 });
+
+const [devToolsOpen, setDevToolsOpen] = createState(false);
 
 const subscribedUpdates = new WeakSet();
 const subscriptionDisposers = new WeakMap();
@@ -53,5 +57,9 @@ export function EcommerceApp(forceUpdate) {
       CheckoutDialog(),
       StoreSnackBar(),
     ]),
+    DevTools({
+      open: devToolsOpen(),
+      onOpenChange: (v) => setDevToolsOpen(v),
+    }),
   ]);
 }

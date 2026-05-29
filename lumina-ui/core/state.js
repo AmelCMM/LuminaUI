@@ -1,12 +1,4 @@
-/**
- * Lightweight state utilities that work with renderer's forceUpdate pattern.
- *
- * API:
- *   createState(initial, forceUpdate) -> [get, set]
- *   useState(initial) -> same shape but subscriptions supported
- *   useEffect(effect, deps, subscribeFn) -> returns a runner to be called by renderer or subscribers
- *   createStore(reducer, initial)
- */
+import { captureStateError, captureEffectError } from "./errors.js";
 
 export function createState(initialValue, forceUpdate = null) {
   let value =
@@ -18,14 +10,20 @@ export function createState(initialValue, forceUpdate = null) {
   const get = () => value;
 
   const set = (next) => {
-    const nextValue = typeof next === "function" ? next(value) : next;
+    let nextValue;
+    try {
+      nextValue = typeof next === "function" ? next(value) : next;
+    } catch (e) {
+      captureStateError(e, { phase: "compute" });
+      return;
+    }
     if (nextValue !== value) {
       value = nextValue;
       subs.forEach((fn) => {
         try {
           fn(value);
         } catch (e) {
-          /* swallow */
+          captureStateError(e, { phase: "notify" });
         }
       });
     }
@@ -39,7 +37,6 @@ export function createState(initialValue, forceUpdate = null) {
   return [get, set, subscribe];
 }
 
-// convenience alias (like React) - returns [get, set, subscribe]
 export const useState = createState;
 
 export function useEffect(effect, deps = undefined) {
@@ -50,10 +47,17 @@ export function useEffect(effect, deps = undefined) {
     if (cleanup) {
       try {
         cleanup();
-      } catch (e) {}
+      } catch (e) {
+        captureEffectError(e, { phase: "cleanup" });
+      }
     }
-    const ret = effect();
-    cleanup = typeof ret === "function" ? ret : null;
+    try {
+      const ret = effect();
+      cleanup = typeof ret === "function" ? ret : null;
+    } catch (e) {
+      captureEffectError(e, { phase: "effect" });
+      cleanup = null;
+    }
   };
 
   const checkAndRun = (currentDeps = deps) => {
@@ -67,7 +71,6 @@ export function useEffect(effect, deps = undefined) {
     }
   };
 
-  // return a function that can be called by renderer or subscribers
   return checkAndRun;
 }
 
@@ -78,14 +81,22 @@ export function createStore(reducer, initialState) {
   const getState = () => state;
 
   const dispatch = (action) => {
-    const nextState =
-      typeof action === "function" ? action(state) : reducer(state, action);
+    let nextState;
+    try {
+      nextState =
+        typeof action === "function" ? action(state) : reducer(state, action);
+    } catch (e) {
+      captureStateError(e, { phase: "dispatch" });
+      return;
+    }
     if (nextState !== state) {
       state = nextState;
       listeners.forEach((fn) => {
         try {
           fn(state);
-        } catch (e) {}
+        } catch (e) {
+          captureStateError(e, { phase: "notify" });
+        }
       });
     }
   };

@@ -1,4 +1,6 @@
 import { createElement } from "./element.js";
+import { captureRenderError } from "./errors.js";
+import { addWrappedListener, removeWrappedListener, getWrappedHandler } from "./handlers.js";
 
 // vnode shape: { tag, props, children, key }
 // function widgets: (forceUpdate) => vnode
@@ -6,10 +8,16 @@ import { createElement } from "./element.js";
 export function mount(componentFn, container) {
   let currentTree = null;
   let mounted = true;
+  let rendering = false;
+  let pendingRender = false;
   const cleanupFns = new Set();
 
   const forceUpdate = () => {
     if (!mounted) return;
+    if (rendering) {
+      pendingRender = true;
+      return;
+    }
     render();
   };
   forceUpdate.onUnmount = (cleanup) => {
@@ -19,21 +27,39 @@ export function mount(componentFn, container) {
   };
 
   function render() {
-    const rawTree =
-      typeof componentFn === "function" ? componentFn(forceUpdate) : componentFn;
-    const newTree = resolveWidget(rawTree, forceUpdate);
-    if (!currentTree) {
-      const dom = renderWidget(newTree, forceUpdate);
-      container.innerHTML = "";
-      container.appendChild(dom);
-    } else if (isRootFragment(currentTree) || isRootFragment(newTree)) {
-      const dom = renderWidget(newTree, forceUpdate);
-      container.innerHTML = "";
-      container.appendChild(dom);
-    } else {
-      patchWidget(container, currentTree, newTree, 0, null, forceUpdate);
+    rendering = true;
+    try {
+      const rawTree =
+        typeof componentFn === "function" ? componentFn(forceUpdate) : componentFn;
+      const newTree = resolveWidget(rawTree, forceUpdate);
+      if (!currentTree) {
+        const dom = renderWidget(newTree, forceUpdate);
+        container.innerHTML = "";
+        container.appendChild(dom);
+      } else if (isRootFragment(currentTree) || isRootFragment(newTree)) {
+        const dom = renderWidget(newTree, forceUpdate);
+        container.innerHTML = "";
+        container.appendChild(dom);
+      } else {
+        patchWidget(container, currentTree, newTree, 0, null, forceUpdate);
+      }
+      currentTree = newTree;
+    } catch (error) {
+      console.error("[LuminaUI render error]", error);
+      captureRenderError(error, { phase: "mount" });
+      if (!currentTree) {
+        const fallback = document.createComment(" render error ");
+        container.innerHTML = "";
+        container.appendChild(fallback);
+        currentTree = { tag: "comment", children: [] };
+      }
+    } finally {
+      rendering = false;
+      if (pendingRender) {
+        pendingRender = false;
+        render();
+      }
     }
-    currentTree = newTree;
   }
 
   render();
@@ -47,7 +73,7 @@ export function mount(componentFn, container) {
       try {
         cleanup();
       } catch (e) {
-        /* swallow */
+        captureRenderError(e, { phase: "unmount" });
       }
     });
     cleanupFns.clear();
@@ -58,50 +84,53 @@ export function mount(componentFn, container) {
 }
 
 function renderWidget(widget, forceUpdate) {
-  // primitives
-  if (isEmptyWidget(widget))
+  try {
+    if (isEmptyWidget(widget))
+      return document.createTextNode("");
+    if (typeof widget === "string" || typeof widget === "number")
+      return document.createTextNode(String(widget));
+    if (typeof Node !== "undefined" && widget instanceof Node) return widget;
+
+    if (Array.isArray(widget)) {
+      const fragment = document.createDocumentFragment();
+      flattenChildren(widget).forEach((child) => {
+        const childDom = renderWidget(child, forceUpdate);
+        if (childDom) fragment.appendChild(childDom);
+      });
+      return fragment;
+    }
+
+    if (typeof widget === "function") {
+      return renderWidget(widget(forceUpdate), forceUpdate);
+    }
+
+    if (widget.tag) {
+      const props = widget.props || {};
+      const children = flattenChildren(widget.children || []);
+
+      const element = createElement(widget.tag, {
+        ...(props || {}),
+        children: [],
+      });
+
+      element._vnodeKey = widget.key ?? props.key ?? null;
+
+      (children || []).forEach((child) => {
+        const childDom = renderWidget(child, forceUpdate);
+        if (childDom) element.appendChild(childDom);
+      });
+
+      return element;
+    }
+
     return document.createTextNode("");
-  if (typeof widget === "string" || typeof widget === "number")
-    return document.createTextNode(String(widget));
-  if (typeof Node !== "undefined" && widget instanceof Node) return widget;
-
-  // arrays -> fragment
-  if (Array.isArray(widget)) {
-    const fragment = document.createDocumentFragment();
-    flattenChildren(widget).forEach((child) => {
-      const childDom = renderWidget(child, forceUpdate);
-      if (childDom) fragment.appendChild(childDom);
+  } catch (error) {
+    captureRenderError(error, {
+      phase: "render",
+      tag: widget?.tag || (typeof widget === "function" ? "component" : null),
     });
-    return fragment;
+    return document.createComment(" render error ");
   }
-
-  // functional widget (component)
-  if (typeof widget === "function") {
-    return renderWidget(widget(forceUpdate), forceUpdate);
-  }
-
-  // vnode object
-  if (widget.tag) {
-    const props = widget.props || {};
-    const children = flattenChildren(widget.children || []);
-
-    const element = createElement(widget.tag, {
-      ...(props || {}),
-      children: [],
-    });
-
-    // attach a backref for fast updates (optional)
-    element._vnodeKey = widget.key ?? props.key ?? null;
-
-    (children || []).forEach((child) => {
-      const childDom = renderWidget(child, forceUpdate);
-      if (childDom) element.appendChild(childDom);
-    });
-
-    return element;
-  }
-
-  return document.createTextNode("");
 }
 
 function normalizeVNode(v, forceUpdate = null) {
@@ -124,150 +153,122 @@ function normalizeVNode(v, forceUpdate = null) {
 }
 
 function patchWidget(parent, oldWidget, newWidget, index = 0, currentDom = null, forceUpdate = null) {
-  // Normalize to vnodes
-  const oldV = normalizeVNode(oldWidget, forceUpdate);
-  const newV = normalizeVNode(newWidget, forceUpdate);
+  try {
+    const oldV = normalizeVNode(oldWidget, forceUpdate);
+    const newV = normalizeVNode(newWidget, forceUpdate);
 
-  const dom = currentDom || parent.childNodes[index];
-  if (!dom) return;
+    const dom = currentDom || parent.childNodes[index];
+    if (!dom) return;
 
-  // Replace if different tag or key
-  const oldTag = oldV.tag;
-  const newTag = newV.tag;
-  const oldKey = oldV.key ?? (oldV.props && oldV.props.key);
-  const newKey = newV.key ?? (newV.props && newV.props.key);
+    const oldTag = oldV.tag;
+    const newTag = newV.tag;
+    const oldKey = oldV.key ?? (oldV.props && oldV.props.key);
+    const newKey = newV.key ?? (newV.props && newV.props.key);
 
-  if (oldTag === "empty" && newTag === "empty") return;
+    if (oldTag === "empty" && newTag === "empty") return;
 
-  if (oldKey != null || newKey != null) {
-    // keyed children are handled at parent's loop level — here we fall back to replace if mismatched
-    if (oldKey !== newKey || oldTag !== newTag) {
+    if (oldKey != null || newKey != null) {
+      if (oldKey !== newKey || oldTag !== newTag) {
+        const newDom = renderWidget(newWidget, forceUpdate);
+        parent.replaceChild(newDom, dom);
+        return newDom;
+      }
+    } else if (oldTag !== newTag) {
       const newDom = renderWidget(newWidget, forceUpdate);
       parent.replaceChild(newDom, dom);
       return newDom;
     }
-  } else if (oldTag !== newTag) {
-    const newDom = renderWidget(newWidget, forceUpdate);
-    parent.replaceChild(newDom, dom);
-    return newDom;
-  }
 
-  // Text node
-  if (
-    newTag === "empty" ||
-    newTag === "text" ||
-    typeof newWidget === "string" ||
-    typeof newWidget === "number"
-  ) {
-    const nextText =
-      newTag === "empty" ? "" : String(newV.children?.[0] ?? newWidget);
     if (
-      dom &&
-      dom.nodeType === Node.TEXT_NODE &&
-      dom.textContent !== nextText
+      newTag === "empty" ||
+      newTag === "text" ||
+      typeof newWidget === "string" ||
+      typeof newWidget === "number"
     ) {
-      dom.textContent = nextText;
-    } else if (dom && dom.nodeType !== Node.TEXT_NODE) {
-      const newDom = renderWidget(newWidget, forceUpdate);
-      parent.replaceChild(newDom, dom);
-      return newDom;
+      const nextText =
+        newTag === "empty" ? "" : String(newV.children?.[0] ?? newWidget);
+      if (dom && dom.nodeType === Node.TEXT_NODE && dom.textContent !== nextText) {
+        dom.textContent = nextText;
+      } else if (dom && dom.nodeType !== Node.TEXT_NODE) {
+        const newDom = renderWidget(newWidget, forceUpdate);
+        parent.replaceChild(newDom, dom);
+        return newDom;
+      }
+      return dom;
     }
-    return dom;
-  }
 
-  // Update props
-  const newProps = newV.props || {};
-  const oldProps = oldV.props || {};
-  updateProps(dom, oldProps, newProps);
+    const newProps = newV.props || {};
+    const oldProps = oldV.props || {};
+    updateProps(dom, oldProps, newProps);
 
-  // Reconcile children (simple keyed-first pass)
-  const oldChildren = flattenChildren(oldV.children || []);
-  const newChildren = flattenChildren(newV.children || []);
+    const oldChildren = flattenChildren(oldV.children || []);
+    const newChildren = flattenChildren(newV.children || []);
 
-  // Build key -> index map for old children
-  const keyed = new Map();
-  oldChildren.forEach((c, i) => {
-    const k = widgetKey(c);
-    const node = dom.childNodes[i];
-    if (k != null && node) keyed.set(k, { vnode: c, node });
-  });
+    const keyed = new Map();
+    oldChildren.forEach((c, i) => {
+      const k = widgetKey(c);
+      const node = dom.childNodes[i];
+      if (k != null && node) keyed.set(k, { vnode: c, node });
+    });
 
-  // If any new child has a key, do keyed reconciliation
-  const anyKeyed = newChildren.some((c) => widgetKey(c) != null);
-  if (anyKeyed) {
-    const usedKeys = new Set();
+    const anyKeyed = newChildren.some((c) => widgetKey(c) != null);
+    if (anyKeyed) {
+      const usedKeys = new Set();
+      newChildren.forEach((nc, i) => {
+        const nk = widgetKey(nc);
+        let node;
+        if (nk != null && keyed.has(nk)) {
+          const oldEntry = keyed.get(nk);
+          usedKeys.add(nk);
+          node = patchWidget(dom, oldEntry.vnode, nc, 0, oldEntry.node, forceUpdate);
+        } else {
+          node = renderWidget(nc, forceUpdate);
+        }
+        const targetNode = dom.childNodes[i] || null;
+        if (node && node !== targetNode) dom.insertBefore(node, targetNode);
+      });
+      keyed.forEach((entry, key) => {
+        if (!usedKeys.has(key) && entry.node.parentNode === dom) dom.removeChild(entry.node);
+      });
+      while (dom.childNodes.length > newChildren.length) dom.removeChild(dom.lastChild);
+      return dom;
+    }
 
-    newChildren.forEach((nc, i) => {
-      const nk = widgetKey(nc);
-      let node;
-
-      if (nk != null && keyed.has(nk)) {
-        const oldEntry = keyed.get(nk);
-        usedKeys.add(nk);
-        node = patchWidget(dom, oldEntry.vnode, nc, 0, oldEntry.node, forceUpdate);
+    const maxLen = Math.max(oldChildren.length, newChildren.length);
+    for (let i = 0; i < maxLen; i++) {
+      const oldC = oldChildren[i];
+      const newC = newChildren[i];
+      const oldEmpty = isEmptyWidget(oldC);
+      const newEmpty = isEmptyWidget(newC);
+      if (oldEmpty && newEmpty) continue;
+      if (oldEmpty && !newEmpty) {
+        const newDom = renderWidget(newC, forceUpdate);
+        if (dom.childNodes[i]) dom.replaceChild(newDom, dom.childNodes[i]);
+        else dom.insertBefore(newDom, dom.childNodes[i] || null);
+      } else if (!oldEmpty && newEmpty) {
+        const emptyDom = renderWidget(newC, forceUpdate);
+        if (dom.childNodes[i]) dom.replaceChild(emptyDom, dom.childNodes[i]);
+        else dom.insertBefore(emptyDom, dom.childNodes[i] || null);
       } else {
-        node = renderWidget(nc, forceUpdate);
+        patchWidget(dom, oldC, newC, i, null, forceUpdate);
       }
-
-      const targetNode = dom.childNodes[i] || null;
-      if (node && node !== targetNode) {
-        dom.insertBefore(node, targetNode);
-      }
-    });
-
-    keyed.forEach((entry, key) => {
-      if (!usedKeys.has(key) && entry.node.parentNode === dom) {
-        dom.removeChild(entry.node);
-      }
-    });
-
-    while (dom.childNodes.length > newChildren.length) {
-      dom.removeChild(dom.lastChild);
     }
-
     return dom;
+  } catch (error) {
+    captureRenderError(error, { phase: "patch" });
+    return currentDom || parent.childNodes[index] || null;
   }
-
-  // Fallback index-based reconciliation
-  const maxLen = Math.max(oldChildren.length, newChildren.length);
-  for (let i = 0; i < maxLen; i++) {
-    const oldC = oldChildren[i];
-    const newC = newChildren[i];
-    const oldEmpty = isEmptyWidget(oldC);
-    const newEmpty = isEmptyWidget(newC);
-
-    if (oldEmpty && newEmpty) {
-      continue;
-    } else if (oldEmpty && !newEmpty) {
-      const newDom = renderWidget(newC, forceUpdate);
-      if (dom.childNodes[i]) dom.replaceChild(newDom, dom.childNodes[i]);
-      else dom.insertBefore(newDom, dom.childNodes[i] || null);
-    } else if (!oldEmpty && newEmpty) {
-      const emptyDom = renderWidget(newC, forceUpdate);
-      if (dom.childNodes[i]) dom.replaceChild(emptyDom, dom.childNodes[i]);
-      else dom.insertBefore(emptyDom, dom.childNodes[i] || null);
-    } else {
-      patchWidget(dom, oldC, newC, i, null, forceUpdate);
-    }
-  }
-
-  return dom;
 }
 
 function updateProps(dom, oldProps = {}, newProps = {}) {
   if (!dom) return;
 
-  // Remove old event listeners and attributes not in newProps
   Object.keys(oldProps).forEach((key) => {
     const oldVal = oldProps[key];
     const nextVal = newProps[key];
-    if (
-      key.startsWith("on") &&
-      typeof oldVal === "function" &&
-      oldVal !== nextVal
-    ) {
+    if (key.startsWith("on") && typeof oldVal === "function" && oldVal !== nextVal) {
       const event = normalizeEventName(key);
-      dom.removeEventListener(event, oldVal);
+      removeWrappedListener(dom, event);
     }
     if (!(key in newProps) || newProps[key] === undefined || newProps[key] === null) {
       // cleanup reflecting props and attributes
@@ -319,7 +320,7 @@ function updateProps(dom, oldProps = {}, newProps = {}) {
       );
     } else if (key.startsWith("on") && typeof value === "function") {
       const event = normalizeEventName(key);
-      dom.addEventListener(event, value);
+      addWrappedListener(dom, event, value);
     } else if (key === "className") {
       if (Array.isArray(value)) {
         dom.className = value.filter((v) => v && typeof v === "string").join(" ");
