@@ -6,21 +6,21 @@ export const luminaDefaultTheme = {
   colors: {
     primary: "#2563eb",
     primaryDark: "#1d4ed8",
-    primarySoft: "rgba(37, 99, 235, 0.12)",
+    primarySoft: "rgba(37, 99, 235, 0.10)",
     danger: "#dc2626",
     dangerDark: "#b91c1c",
-    dangerSoft: "rgba(220, 38, 38, 0.12)",
+    dangerSoft: "rgba(220, 38, 38, 0.10)",
     surface: "#ffffff",
-    surfaceMuted: "#f8fafc",
+    surfaceMuted: "#f1f5f9",
     surfaceRaised: "#ffffff",
-    text: "#111827",
+    text: "#0f172a",
     muted: "#64748b",
-    border: "#e5e7eb",
+    border: "#e2e8f0",
     borderStrong: "#cbd5e1",
     track: "#e2e8f0",
-    shadow: "rgba(15, 23, 42, 0.12)",
-    overlay: "rgba(15, 23, 42, 0.58)",
-    focus: "rgba(37, 99, 235, 0.18)",
+    shadow: "rgba(15, 23, 42, 0.10)",
+    overlay: "rgba(15, 23, 42, 0.50)",
+    focus: "rgba(37, 99, 235, 0.20)",
   },
   radius: {
     sm: "6px",
@@ -30,12 +30,12 @@ export const luminaDefaultTheme = {
     pill: "999px",
   },
   shadow: {
-    xs: "0 1px 2px rgba(15, 23, 42, 0.06)",
-    sm: "0 8px 22px rgba(15, 23, 42, 0.08)",
-    md: "0 18px 44px rgba(15, 23, 42, 0.14)",
-    lg: "0 24px 70px rgba(15, 23, 42, 0.24)",
+    xs: "0 1px 2px rgba(15, 23, 42, 0.05)",
+    sm: "0 4px 12px rgba(15, 23, 42, 0.08)",
+    md: "0 12px 32px rgba(15, 23, 42, 0.10)",
+    lg: "0 24px 60px rgba(15, 23, 42, 0.14)",
   },
-  transition: "160ms ease",
+  transition: "200ms ease",
 };
 
 function kebabCase(value) {
@@ -230,7 +230,7 @@ export function cleanStyle(style) {
 export function fieldStyle(style = {}) {
   return cleanStyle({
     width: "100%",
-    minHeight: "38px",
+    minHeight: "40px",
     padding: "9px 12px",
     borderRadius: luminaTheme.radius.md,
     border: `1px solid ${luminaTheme.colors.borderStrong}`,
@@ -238,9 +238,9 @@ export function fieldStyle(style = {}) {
     color: luminaTheme.colors.text,
     font: "inherit",
     fontSize: "14px",
+    lineHeight: 1.5,
     outline: "none",
-    transition: `border-color ${luminaTheme.transition}, box-shadow ${luminaTheme.transition}, background-color ${luminaTheme.transition}`,
-    boxShadow: "0 1px 1px rgba(15, 23, 42, 0.03)",
+    transition: `border-color ${luminaTheme.transition}, box-shadow ${luminaTheme.transition}`,
     ...style,
   });
 }
@@ -256,7 +256,7 @@ export function clearFieldFocus(event, style = {}) {
   event.target.style.borderColor =
     style.borderColor || luminaTheme.colors.borderStrong;
   event.target.style.boxShadow =
-    style.boxShadow || "0 1px 1px rgba(15, 23, 42, 0.03)";
+    style.boxShadow || "none";
 }
 
 export function omitProps(props = {}, omitted = []) {

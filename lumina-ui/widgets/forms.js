@@ -15,8 +15,8 @@ function ensureFormStyles() {
     "lumina-form-styles",
     `
 .lumina-field:focus-visible {
-  outline: 2px solid ${luminaTheme.colors.focus};
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 3px ${luminaTheme.colors.focus};
 }
 .lumina-field:hover:not(:disabled) {
   border-color: ${luminaTheme.colors.primary} !important;
@@ -67,7 +67,7 @@ export function FormField(propsOrChildren = {}, maybeChildren = undefined) {
       style: cleanStyle({
         display: "flex",
         flexDirection: "column",
-        gap: "6px",
+        gap: "8px",
         color: "inherit",
         ...style,
       }),
@@ -81,7 +81,7 @@ export function FormField(propsOrChildren = {}, maybeChildren = undefined) {
                 display: "inline-flex",
                 gap: "4px",
                 fontSize: "13px",
-                fontWeight: 700,
+                fontWeight: 600,
                 color: luminaTheme.colors.text,
               },
             },

@@ -18,8 +18,8 @@ function ensureOverlayStyles() {
 }
 .lumina-menu-item:focus-visible,
 .lumina-popup-button:focus-visible {
-  outline: 2px solid ${luminaTheme.colors.focus};
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 3px ${luminaTheme.colors.focus};
 }
 `,
   );
@@ -118,7 +118,7 @@ export function Overlay(propsOrChildren = {}, maybeChildren = undefined) {
                 backgroundColor: luminaTheme.colors.surface,
                 color: luminaTheme.colors.text,
                 border: `1px solid ${luminaTheme.colors.border}`,
-                boxShadow: luminaTheme.shadow.lg,
+                boxShadow: "0 24px 60px rgba(15, 23, 42, 0.14)",
                 ...panelStyle,
               }),
             },
@@ -207,7 +207,7 @@ export function Popover(propsOrChildren = {}, maybeChildren = undefined) {
                 backgroundColor: luminaTheme.colors.surface,
                 color: luminaTheme.colors.text,
                 border: `1px solid ${luminaTheme.colors.border}`,
-                boxShadow: luminaTheme.shadow.md,
+                boxShadow: "0 8px 24px rgba(15, 23, 42, 0.10)",
                 padding: "6px",
                 ...popoverPlacement(placement, offset),
                 ...panelStyle,
@@ -261,6 +261,10 @@ export function Menu(propsOrChildren = {}, maybeChildren = undefined) {
         gap: "2px",
         minWidth: "180px",
         color: luminaTheme.colors.text,
+        borderRadius: luminaTheme.radius.md,
+        border: `1px solid ${luminaTheme.colors.border}`,
+        boxShadow: luminaTheme.shadow.sm,
+        padding: "4px",
         ...style,
       }),
     },

@@ -1,3 +1,22 @@
+import { ensureGlobalStyle } from "./lumina-ui/widgets/utils.js";
+
+ensureGlobalStyle(
+  "lumina-global-reset",
+  `
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+::selection {
+  background-color: rgba(37, 99, 235, 0.18);
+}
+`,
+);
+
 export { mount } from "./lumina-ui/core/renderer.js";
 export { errorBus } from "./lumina-ui/core/errors.js";
 export {

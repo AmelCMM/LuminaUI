@@ -19,6 +19,14 @@ function ensureFeedbackStyles() {
   50% { transform: translateX(0%); }
   100% { transform: translateX(100%); }
 }
+@keyframes lumina-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes lumina-scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
 `,
   );
 }
@@ -33,14 +41,14 @@ export function ModalBarrier(props = {}) {
         position: "fixed",
         inset: 0,
         backgroundColor: props.color || luminaTheme.colors.overlay,
-        backdropFilter: "blur(2px)",
-        zIndex: props.zIndex ?? 1000,
-        ...props.style,
-      }),
-    },
-    children: [],
-    key: props.key,
-  };
+    backdropFilter: "blur(4px)",
+    zIndex: props.zIndex ?? 1000,
+    ...props.style,
+  }),
+},
+children: [],
+key: props.key,
+};
 }
 
 export function Dialog(propsOrChildren = {}, maybeChildren = undefined) {
@@ -61,6 +69,7 @@ export function Dialog(propsOrChildren = {}, maybeChildren = undefined) {
         alignItems: "center",
         justifyContent: "center",
         padding: px(props.padding ?? 20),
+        animation: "lumina-fade-in 150ms ease",
         ...props.overlayStyle,
       }),
     },
@@ -96,6 +105,7 @@ export function Dialog(propsOrChildren = {}, maybeChildren = undefined) {
             borderRadius: luminaTheme.radius.xl,
             backgroundColor: luminaTheme.colors.surface,
             boxShadow: luminaTheme.shadow.lg,
+            animation: "lumina-scale-in 150ms ease",
             ...props.style,
           }),
         },
@@ -193,8 +203,8 @@ export function SnackBar(propsOrChildren = {}, maybeChildren = undefined) {
       style: cleanStyle({
         position: "fixed",
         left: "50%",
-        bottom: props.position === "top" ? undefined : "20px",
-        top: props.position === "top" ? "20px" : undefined,
+        bottom: props.position === "top" ? undefined : "24px",
+        top: props.position === "top" ? "24px" : undefined,
         transform: "translateX(-50%)",
         zIndex: props.zIndex ?? 3000,
         pointerEvents: "auto",
@@ -204,12 +214,13 @@ export function SnackBar(propsOrChildren = {}, maybeChildren = undefined) {
         gap: "14px",
         minWidth: "min(420px, calc(100vw - 32px))",
         maxWidth: "calc(100vw - 32px)",
-        padding: "12px 14px",
-        border: "1px solid rgba(255, 255, 255, 0.10)",
+        padding: "14px 16px",
+        border: "1px solid rgba(255, 255, 255, 0.08)",
         borderRadius: luminaTheme.radius.lg,
         backgroundColor: "#0f172a",
-        color: "#ffffff",
-        boxShadow: luminaTheme.shadow.md,
+        color: "#f1f5f9",
+        boxShadow: "0 16px 48px rgba(15, 23, 42, 0.20)",
+        animation: "lumina-scale-in 200ms ease",
         ...props.style,
       }),
     },

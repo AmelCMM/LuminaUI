@@ -18,8 +18,8 @@ function ensureSelectionStyles() {
   background-color: ${luminaTheme.colors.primarySoft};
 }
 .lumina-combobox-input:focus-visible {
-  outline: 2px solid ${luminaTheme.colors.focus};
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 3px ${luminaTheme.colors.focus};
 }
 `,
   );
@@ -198,7 +198,7 @@ export function ComboBox({
                 border: `1px solid ${luminaTheme.colors.border}`,
                 borderRadius: luminaTheme.radius.md,
                 backgroundColor: luminaTheme.colors.surface,
-                boxShadow: luminaTheme.shadow.md,
+                boxShadow: "0 8px 24px rgba(15, 23, 42, 0.10)",
                 padding: "4px",
                 ...listStyle,
               }),
@@ -298,7 +298,7 @@ function comboOption({
         minHeight: "36px",
         padding: "8px 10px",
         border: "none",
-        borderRadius: luminaTheme.radius.sm,
+        borderRadius: luminaTheme.radius.md,
         backgroundColor: selected ? luminaTheme.colors.primarySoft : "transparent",
         color: option.disabled ? luminaTheme.colors.muted : luminaTheme.colors.text,
         font: "inherit",

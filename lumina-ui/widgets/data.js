@@ -1,9 +1,24 @@
 import {
   cleanStyle,
+  ensureGlobalStyle,
   luminaTheme,
   omitProps,
   px,
 } from "./utils.js";
+
+function ensureDataStyles() {
+  ensureGlobalStyle(
+    "lumina-data-styles",
+    `
+.lumina-table tbody tr {
+  transition: background-color 150ms ease;
+}
+.lumina-table tbody tr:not(.lumina-table-empty):hover {
+  background-color: ${luminaTheme.colors.surfaceMuted};
+}
+`,
+  );
+}
 
 export function DataTable({
   columns = [],
@@ -24,6 +39,7 @@ export function DataTable({
   onRowClick,
   ...props
 } = {}) {
+  ensureDataStyles();
   const visibleRows = sortBy
     ? sortRows(rows, columns, sortBy, sortDirection)
     : [...rows];
@@ -64,6 +80,7 @@ export function DataTable({
         tag: "table",
         props: {
           role: props.role || "table",
+          className: "lumina-table",
           style: cleanStyle({
             width: "100%",
             borderCollapse: "separate",
@@ -316,7 +333,7 @@ function tableHead({
               style: cleanStyle({
                 position: stickyHeader ? "sticky" : undefined,
                 top: stickyHeader ? 0 : undefined,
-                padding: dense ? "8px 10px" : "11px 12px",
+                padding: dense ? "8px 12px" : "12px 14px",
                 textAlign: column.align || "left",
                 width: px(column.width),
                 borderBottom: `1px solid ${luminaTheme.colors.border}`,
@@ -325,7 +342,7 @@ function tableHead({
                 fontSize: "12px",
                 fontWeight: 800,
                 textTransform: "uppercase",
-                letterSpacing: 0,
+                letterSpacing: "0.03em",
                 whiteSpace: "nowrap",
                 ...headerStyle,
                 ...column.headerStyle,
@@ -372,7 +389,7 @@ function tableRow({
         tag: "td",
         props: {
           style: cleanStyle({
-            padding: dense ? "8px 10px" : "12px",
+            padding: dense ? "8px 12px" : "12px 14px",
             textAlign: column.align || "left",
             borderBottom: `1px solid ${luminaTheme.colors.border}`,
             verticalAlign: "middle",
@@ -398,7 +415,7 @@ function emptyRow(columns, emptyText, dense) {
         props: {
           colSpan: Math.max(columns.length, 1),
           style: {
-            padding: dense ? "16px 10px" : "28px 12px",
+            padding: dense ? "16px 14px" : "28px 14px",
             textAlign: "center",
             color: luminaTheme.colors.muted,
           },
@@ -429,21 +446,21 @@ function paginationButton({
       },
       style: cleanStyle({
         minWidth: "36px",
-        minHeight: "34px",
-        padding: "7px 10px",
+        minHeight: "36px",
+        padding: "7px 12px",
         borderRadius: luminaTheme.radius.md,
         border: `1px solid ${
-          active ? luminaTheme.colors.primary : luminaTheme.colors.borderStrong
+          active ? luminaTheme.colors.primary : luminaTheme.colors.border
         }`,
         backgroundColor: active
           ? luminaTheme.colors.primary
-          : luminaTheme.colors.surface,
+          : "transparent",
         color: active ? "white" : luminaTheme.colors.text,
         font: "inherit",
         fontSize: "13px",
-        fontWeight: active ? 800 : 700,
+        fontWeight: active ? 700 : 600,
         cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.48 : 1,
+        opacity: disabled ? 0.4 : 1,
         ...style,
         ...(active ? activeStyle : {}),
       }),

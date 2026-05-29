@@ -342,8 +342,8 @@ export function Card(propsOrChildren = {}, maybeChildren = undefined) {
         border: `1px solid ${luminaTheme.colors.border}`,
         borderRadius: props.radius ?? 12,
         boxShadow: props.elevation
-          ? `0 ${props.elevation * 3}px ${props.elevation * 8}px rgba(15, 23, 42, 0.12)`
-          : luminaTheme.shadow.xs,
+          ? `0 ${props.elevation * 3}px ${props.elevation * 8}px rgba(15, 23, 42, 0.10)`
+          : luminaTheme.shadow.sm,
         ...(props.decoration || {}),
       },
       padding: props.padding ?? 16,

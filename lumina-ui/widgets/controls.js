@@ -11,17 +11,20 @@ function ensureControlStyles() {
     "lumina-control-styles",
     `
 .lumina-button:not(:disabled):hover {
-  filter: saturate(1.06);
+  filter: brightness(1.06);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.10);
 }
 .lumina-button:not(:disabled):active {
+  filter: brightness(0.96);
   transform: translateY(0);
+  box-shadow: none;
 }
 .lumina-button:focus-visible,
 .lumina-switch:focus-visible,
 .lumina-field:focus-visible {
-  outline: 2px solid ${luminaTheme.colors.focus};
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 3px ${luminaTheme.colors.focus};
 }
 .lumina-field:hover:not(:disabled) {
   border-color: ${luminaTheme.colors.primary} !important;
@@ -50,14 +53,14 @@ export function Button({
     primary: {
       backgroundColor: luminaTheme.colors.primary,
       color: "white",
-      border: `1px solid ${luminaTheme.colors.primary}`,
-      boxShadow: "0 8px 18px rgba(37, 99, 235, 0.20)",
+      border: `1px solid ${luminaTheme.colors.primaryDark}`,
+      boxShadow: "0 1px 3px rgba(37, 99, 235, 0.24)",
     },
     secondary: {
       backgroundColor: luminaTheme.colors.surface,
       color: luminaTheme.colors.primary,
       border: `1px solid ${luminaTheme.colors.borderStrong}`,
-      boxShadow: luminaTheme.shadow.xs,
+      boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
     },
     text: {
       backgroundColor: "transparent",
@@ -67,13 +70,13 @@ export function Button({
     danger: {
       backgroundColor: luminaTheme.colors.danger,
       color: "white",
-      border: `1px solid ${luminaTheme.colors.danger}`,
-      boxShadow: "0 8px 18px rgba(220, 38, 38, 0.18)",
+      border: `1px solid ${luminaTheme.colors.dangerDark}`,
+      boxShadow: "0 1px 3px rgba(220, 38, 38, 0.24)",
     },
   };
 
   const finalStyle = {
-    minHeight: "36px",
+    minHeight: "38px",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -265,7 +268,7 @@ export function Switch({
     position: "relative",
     transition: `background-color ${luminaTheme.transition}, border-color ${luminaTheme.transition}, box-shadow ${luminaTheme.transition}`,
     outline: "none",
-    boxShadow: currentValue ? "0 8px 18px rgba(37, 99, 235, 0.16)" : "none",
+    boxShadow: currentValue ? "0 1px 3px rgba(37, 99, 235, 0.30)" : "none",
     opacity: disabled ? 0.6 : 1,
     ...style,
   };
@@ -302,7 +305,7 @@ export function Switch({
             top: "1px",
             left: currentValue ? "22px" : "1px",
             transition: `left ${luminaTheme.transition}, transform ${luminaTheme.transition}`,
-            boxShadow: "0 2px 6px rgba(15, 23, 42, 0.22)",
+            boxShadow: "0 2px 4px rgba(15, 23, 42, 0.18)",
           },
         },
         children: [],
