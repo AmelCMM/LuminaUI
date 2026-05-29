@@ -145,13 +145,18 @@ LuminaUI/
         ├── animation.js
         ├── accessibility.js
         ├── controls.js
+        ├── data.js
         ├── display.js
         ├── feedback.js
         ├── forms.js
         ├── interaction.js
         ├── layout.js
         ├── navigation.js
+        ├── overlay.js
+        ├── routing.js
         ├── scrolling.js
+        ├── selection.js
+        ├── theme.js
         ├── text.js
         └── utils.js
 ```
@@ -436,6 +441,44 @@ store.getState();
 
 This section lists the current widget families and the most useful props. The
 API is intentionally small and JavaScript-friendly.
+
+### Theme
+
+Import:
+
+```js
+import {
+  ThemeProvider,
+  ThemeScope,
+  GlobalTheme,
+  createTheme,
+} from "./lumina-ui.js";
+```
+
+`ThemeProvider` sets LuminaUI CSS design tokens for all nested widgets.
+
+```js
+const brandTheme = createTheme({
+  colors: {
+    primary: "#0f766e",
+    surface: "#f8fafc",
+    text: "#0f172a",
+  },
+  radius: {
+    md: "10px",
+  },
+});
+
+ThemeProvider({ theme: brandTheme, applySurface: true }, [
+  Column({ gap: 12, padding: 16 }, [
+    Heading("Themed dashboard"),
+    Button({ text: "Primary action" }),
+  ]),
+])
+```
+
+Use `GlobalTheme({ theme })` when you want the tokens applied to `:root`
+instead of a wrapper element.
 
 ### Layout Widgets
 
@@ -1376,6 +1419,182 @@ Drawer(
 )
 ```
 
+### Routing
+
+Import:
+
+```js
+import {
+  createRouter,
+  Router,
+  RouteView,
+  Link,
+  NavLink,
+} from "./lumina-ui.js";
+```
+
+Routing is a lightweight browser-history helper. Routes can render `child`,
+`component`, or `render`.
+
+```js
+const router = createRouter({
+  routes: [
+    { path: "/", child: Text("Home") },
+    {
+      path: "/products/:id",
+      component: ({ params }) => Text(`Product ${params.id}`),
+    },
+    { path: "*", child: Text("Not found") },
+  ],
+});
+
+Column({ gap: 12 }, [
+  Row({ gap: 8 }, [
+    NavLink({ router, to: "/", label: "Home", exact: true }),
+    Link({ router, to: "/products/42", label: "Product" }),
+  ]),
+  Router({ router }),
+])
+```
+
+### Overlays And Menus
+
+Import:
+
+```js
+import {
+  Overlay,
+  Popover,
+  Menu,
+  MenuItem,
+  MenuDivider,
+  PopupMenuButton,
+} from "./lumina-ui.js";
+```
+
+Overlays are controlled widgets, so pair them with `useState` or a store.
+
+```js
+Overlay(
+  {
+    open: dialogOpen(),
+    modal: true,
+    onDismiss: () => setDialogOpen(false),
+  },
+  [
+    Padding({ padding: 20 }, [
+      Heading({ level: 3 }, "Quick action"),
+      Text("This content sits above a scrim."),
+    ]),
+  ],
+)
+```
+
+Anchored menu:
+
+```js
+PopupMenuButton({
+  open: menuOpen(),
+  onOpenChange: setMenuOpen,
+  label: "Actions",
+  items: [
+    { label: "Edit", value: "edit" },
+    { separator: true },
+    { label: "Delete", value: "delete", danger: true },
+  ],
+  onSelect: (value) => console.log(value),
+})
+```
+
+### Data Widgets
+
+Import:
+
+```js
+import {
+  DataTable,
+  Pagination,
+} from "./lumina-ui.js";
+```
+
+`DataTable` supports custom column renderers and controlled sort state.
+
+```js
+DataTable({
+  rows: products(),
+  sortBy: sortBy(),
+  sortDirection: sortDirection(),
+  onSortChange: (key, direction) => {
+    setSortBy(key);
+    setSortDirection(direction);
+  },
+  columns: [
+    { key: "name", label: "Product", sortable: true },
+    { key: "stock", label: "Stock", align: "right", sortable: true },
+    {
+      key: "status",
+      label: "Status",
+      render: (product) => Badge({ text: product.status }),
+    },
+  ],
+})
+```
+
+```js
+Pagination({
+  page: page(),
+  pageSize: 20,
+  totalItems: totalProducts(),
+  onPageChange: setPage,
+})
+```
+
+### Advanced Selection
+
+Import:
+
+```js
+import {
+  ComboBox,
+  Autocomplete,
+} from "./lumina-ui.js";
+```
+
+`ComboBox` is a controlled text input with a listbox.
+
+```js
+ComboBox({
+  value: city(),
+  inputValue: cityQuery(),
+  open: cityOpen(),
+  onInputChange: setCityQuery,
+  onOpenChange: setCityOpen,
+  onChange: (value, option) => {
+    setCity(value);
+    setCityQuery(option.label);
+  },
+  options: [
+    { label: "Lusaka", value: "lusaka" },
+    { label: "Cape Town", value: "cape-town" },
+  ],
+})
+```
+
+`Autocomplete` filters options by `inputValue` before rendering the combobox.
+
+```js
+Autocomplete({
+  inputValue: search(),
+  onInputChange: setSearch,
+  onChange: setSelectedProduct,
+  options: products().map((product) => ({
+    label: product.name,
+    value: product.id,
+    description: product.category,
+  })),
+})
+```
+
 ### Animation
 
 Import:
@@ -1535,7 +1754,9 @@ For now, keep state explicit and prefer small widget trees.
 
 ## Styling
 
-LuminaUI uses inline style objects by default.
+LuminaUI uses inline style objects by default. Core colors, radii, shadows, and
+transitions are exposed as CSS-variable-backed tokens so `ThemeProvider` can
+theme nested widgets without a build step.
 
 ```js
 Text("Styled", {
@@ -1643,10 +1864,10 @@ LuminaUI is experimental. Important limitations:
 
 - Rendering is simple and can still be improved.
 - There is no component-local hook system yet.
-- There is no global theme provider yet.
-- Routing is not implemented yet.
+- Theme support is token-based and intentionally lightweight.
+- Routing is client-side and intentionally small.
 - Accessibility coverage is partial and should be expanded widget by widget.
-- Most widgets use inline styles rather than a design token system.
+- Most widgets still use inline styles, with design tokens layered underneath.
 - Animation widgets use CSS transitions only.
 
 ## Roadmap
@@ -1675,6 +1896,12 @@ Completed:
   `Dropdown`, `TextArea`
 - Navigation widgets: `Scaffold`, `AppBar`, `TabBar`, `TabBarView`,
   `BottomNavigationBar`, `NavigationRail`, `Drawer`
+- Theme widgets: `ThemeProvider`, `ThemeScope`, `GlobalTheme`
+- Routing widgets: `Router`, `RouteView`, `Link`, `NavLink`
+- Overlay widgets: `Overlay`, `OverlayEntry`, `Popover`, `Menu`, `MenuItem`,
+  `MenuDivider`, `PopupMenuButton`
+- Data widgets: `DataTable`, `Pagination`
+- Advanced selection widgets: `ComboBox`, `Autocomplete`
 - Animation widgets: `AnimatedContainer`, `AnimatedOpacity`, `AnimatedScale`,
   `AnimatedSlide`, `AnimatedSwitcher`
 
@@ -1683,8 +1910,8 @@ Next:
 - Smarter rendering and diffing
 - Component isolation
 - Lifecycle hooks
-- Theme system
-- Router
+- Component-local state helpers
+- Portal support
 - Better keyboard accessibility
 - More Material-style components
 

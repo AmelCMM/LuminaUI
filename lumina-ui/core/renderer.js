@@ -312,9 +312,11 @@ function updateProps(dom, oldProps = {}, newProps = {}) {
     if (key === "style" && typeof value === "object") {
       const previous = oldProps.style || {};
       Object.keys(previous).forEach((styleKey) => {
-        if (!(styleKey in value)) dom.style[styleKey] = "";
+        if (!(styleKey in value)) setStyleValue(dom, styleKey, "");
       });
-      Object.assign(dom.style, value);
+      Object.entries(value).forEach(([styleKey, styleValue]) =>
+        setStyleValue(dom, styleKey, styleValue),
+      );
     } else if (key.startsWith("on") && typeof value === "function") {
       const event = normalizeEventName(key);
       dom.addEventListener(event, value);
@@ -412,6 +414,18 @@ function normalizeEventName(onName) {
   const lower = name.toLowerCase();
   if (lower === "doubleclick" || lower === "dblclick") return "dblclick";
   return lower;
+}
+
+function setStyleValue(dom, key, value) {
+  if (key.startsWith("--") && dom.style && dom.style.setProperty) {
+    if (value === undefined || value === null || value === "") {
+      dom.style.removeProperty?.(key);
+    } else {
+      dom.style.setProperty(key, String(value));
+    }
+  } else if (dom.style) {
+    dom.style[key] = value ?? "";
+  }
 }
 
 function isEmptyWidget(widget) {

@@ -17,7 +17,7 @@ import {
 } from "../../widgets/layout.js";
 import { Button, Input, Switch } from "../../widgets/controls.js";
 import { Badge, Icon, Image, Opacity, PhysicalModel } from "../../widgets/display.js";
-import { Dialog, SnackBar } from "../../widgets/feedback.js";
+import { SnackBar } from "../../widgets/feedback.js";
 import {
   Dropdown,
   Form,
@@ -31,6 +31,9 @@ import { AppBar, Drawer, Scaffold } from "../../widgets/navigation.js";
 import { GridView, ListView, SingleChildScrollView } from "../../widgets/scrolling.js";
 import { Caption, Heading, RichText, Text } from "../../widgets/text.js";
 import { ensureGlobalStyle } from "../../widgets/utils.js";
+import { ComboBox } from "../../widgets/selection.js";
+import { DataTable, Pagination } from "../../widgets/data.js";
+import { Overlay } from "../../widgets/overlay.js";
 import { sortOptions } from "./data.js";
 import {
   activePromo,
@@ -116,6 +119,14 @@ import {
   updateCartQuantity,
   wishlistProducts,
   deleteProduct,
+  getAdminProductPage,
+  setAdminProductPage,
+  getAdminOrderPage,
+  setAdminOrderPage,
+  getCategoryInput,
+  setCategoryInput,
+  getCategoryOpen,
+  setCategoryOpen,
 } from "./store.js";
 
 export const theme = {
@@ -722,6 +733,12 @@ function InsightRow(label, detail, color) {
 }
 
 function ProductAdminPanel() {
+  const products = getProducts();
+  const page = getAdminProductPage();
+  const pageSize = 5;
+  const totalPages = Math.ceil(products.length / pageSize);
+  const pageProducts = products.slice((page - 1) * pageSize, page * pageSize);
+
   return Card(
     { padding: 0, style: { borderColor: theme.border, overflow: "hidden" } },
     [
@@ -736,99 +753,120 @@ function ProductAdminPanel() {
             Text("Product operations", { color: theme.text, weight: 900, size: 18 }),
             Caption({ color: theme.muted }, "Adjust stock, publish status, and edit product data."),
           ]),
-          Caption({ color: theme.muted }, `${getProducts().length} products`),
+          Caption({ color: theme.muted }, `${products.length} products`),
         ]),
       ]),
       Divider({ color: theme.border, margin: 0 }),
-      ListView({
-        key: "admin-product-list",
-        items: getProducts(),
-        itemBuilder: ProductAdminRow,
-      }),
-    ],
-  );
-}
-
-function ProductAdminRow(product) {
-  const low = product.stock <= product.lowStockThreshold;
-  return Container(
-    { key: product.id },
-    [
-      Padding({ padding: 14 }, [
-        Row({ 
-          gap: 12, 
-          className: "mobile-column mobile-gap",
-          style: { alignItems: "center" } 
-        }, [
-          Container(
+      Column({ gap: 0 }, [
+        DataTable({
+          rows: pageProducts,
+          rowKey: (row) => row.id,
+          columns: [
             {
-              width: 58,
-              height: 58,
-              decoration: { borderRadius: 10 },
-              style: { overflow: "hidden", flexShrink: 0 },
+              key: "name",
+              label: "Product",
+              sortable: true,
+              render: (product) =>
+                Row({ gap: 10, style: { alignItems: "center" } }, [
+                  Container(
+                    { width: 40, height: 40, decoration: { borderRadius: 8 }, style: { overflow: "hidden", flexShrink: 0 } },
+                    [Image({ src: product.image, alt: product.name, width: 40, height: 40 })],
+                  ),
+                  Column({ gap: 1 }, [
+                    Text(product.name, { weight: 800, size: 13 }),
+                    Caption({ color: theme.muted }, product.sku),
+                  ]),
+                ]),
             },
-            [Image({ src: product.image, alt: product.name, width: 58, height: 58 })],
-          ),
-          Expanded([
-            Column({ gap: 5 }, [
-              Row({ 
-                gap: 8, 
-                className: "mobile-stack",
-                style: { flexWrap: "wrap", alignItems: "center" } 
-              }, [
-                Text(product.name, { color: theme.text, weight: 900 }),
-                StatusPill(product.active ? "Live" : "Hidden", product.active ? theme.accent : theme.muted),
-                low ? StatusPill("Low stock", theme.warning) : null,
-              ]),
-              Caption(
-                { color: theme.muted },
-                `${product.sku} · ${product.category} · ${formatMoney(product.price)} · ${product.vendor}`,
-              ),
+            { key: "category", label: "Category" },
+            {
+              key: "price",
+              label: "Price",
+              align: "right",
+              sortable: true,
+              render: (product) =>
+                Text(formatMoney(product.price), { weight: 700, color: theme.primary }),
+            },
+            {
+              key: "stock",
+              label: "Stock",
+              align: "right",
+              render: (product) =>
+                Row({ gap: 6, style: { alignItems: "center", justifyContent: "flex-end" } }, [
+                  Button({
+                    text: "-",
+                    variant: "secondary",
+                    onClick: () => adjustProductStock(product.id, -1),
+                    style: { padding: "2px 7px", minHeight: "28px", borderColor: theme.border },
+                  }),
+                  Text(String(product.stock), {
+                    weight: 900,
+                    size: 13,
+                    color: product.stock <= product.lowStockThreshold ? theme.warning : theme.text,
+                    style: { minWidth: "24px", textAlign: "center" },
+                  }),
+                  Button({
+                    text: "+",
+                    variant: "secondary",
+                    onClick: () => adjustProductStock(product.id, 1),
+                    style: { padding: "2px 7px", minHeight: "28px", borderColor: theme.border },
+                  }),
+                ]),
+            },
+            {
+              key: "status",
+              label: "Status",
+              render: (product) =>
+                Row({ gap: 6, style: { alignItems: "center" } }, [
+                  StatusPill(product.active ? "Live" : "Hidden", product.active ? theme.accent : theme.muted),
+                ]),
+            },
+            {
+              key: "actions",
+              label: "",
+              render: (product) =>
+                Row({ gap: 6 }, [
+                  Switch({
+                    value: product.active,
+                    ariaLabel: `${product.name} visibility`,
+                    onChange: () => toggleProductActive(product.id),
+                  }),
+                  Button({
+                    text: "Edit",
+                    variant: "secondary",
+                    onClick: () => startEditProduct(product.id),
+                    style: { padding: "4px 9px", borderColor: theme.border, color: theme.text, fontSize: "12px" },
+                  }),
+                  Button({
+                    text: "Del",
+                    variant: "text",
+                    onClick: () => deleteProduct(product.id),
+                    style: { color: theme.danger, padding: "4px 6px", fontSize: "12px" },
+                  }),
+                ]),
+            },
+          ],
+          dense: true,
+          style: { border: "none", boxShadow: "none", borderRadius: 0 },
+        }),
+        Container(
+          {
+            padding: { vertical: 10, horizontal: 14 },
+            style: { borderTop: `1px solid ${theme.border}` },
+          },
+          [
+            Row({ mainAxisAlignment: "spaceBetween", style: { alignItems: "center" } }, [
+              Caption({ color: theme.muted }, `Page ${page} of ${totalPages}`),
+              Pagination({
+                page,
+                pageSize,
+                totalItems: products.length,
+                onPageChange: setAdminProductPage,
+              }),
             ]),
-          ]),
-          Row({ 
-            gap: 6, 
-            className: "mobile-stack mobile-gap",
-            style: { alignItems: "center", flexWrap: "wrap" } 
-          }, [
-            Button({
-              text: "-",
-              variant: "secondary",
-              onClick: () => adjustProductStock(product.id, -1),
-              style: { padding: "4px 9px", borderColor: theme.border },
-            }),
-            Text(String(product.stock), {
-              color: low ? theme.warning : theme.text,
-              weight: 900,
-              style: { minWidth: "26px", textAlign: "center" },
-            }),
-            Button({
-              text: "+",
-              variant: "secondary",
-              onClick: () => adjustProductStock(product.id, 1),
-              style: { padding: "4px 9px", borderColor: theme.border },
-            }),
-          ]),
-          Switch({
-            value: product.active,
-            ariaLabel: `${product.name} visibility`,
-            onChange: () => toggleProductActive(product.id),
-          }),
-          Button({
-            text: "Edit",
-            variant: "secondary",
-            onClick: () => startEditProduct(product.id),
-            style: { borderColor: theme.border, color: theme.text },
-          }),
-          Button({
-            text: "Delete",
-            variant: "text",
-            onClick: () => deleteProduct(product.id),
-            style: { color: theme.danger },
-          }),
-        ]),
+          ],
+        ),
       ]),
-      Divider({ color: theme.border, margin: 0 }),
     ],
   );
 }
@@ -954,6 +992,12 @@ function DraftSwitch(label, field, value) {
 }
 
 function OrderAdminPanel() {
+  const orders = getOrders();
+  const page = getAdminOrderPage();
+  const pageSize = 5;
+  const totalPages = Math.ceil(orders.length / pageSize);
+  const pageOrders = orders.slice((page - 1) * pageSize, page * pageSize);
+
   return Card(
     { padding: 0, style: { borderColor: theme.border, overflow: "hidden" } },
     [
@@ -964,57 +1008,80 @@ function OrderAdminPanel() {
         ]),
       ]),
       Divider({ color: theme.border, margin: 0 }),
-      ListView({
-        key: "admin-order-list",
-        items: getOrders(),
-        itemBuilder: OrderAdminCard,
-      }),
-    ],
-  );
-}
-
-function OrderAdminCard(order) {
-  return Container(
-    { key: order.id },
-    [
-      Padding({ padding: 14 }, [
-        Column({ gap: 10 }, [
-          Row({ 
-            mainAxisAlignment: "spaceBetween", 
-            gap: 10,
-            className: "mobile-column mobile-gap",
-          }, [
-            Column({ gap: 2 }, [
-              Text(order.id, { color: theme.text, weight: 900 }),
-              Caption({ color: theme.muted }, `${order.customer.name} · ${order.placedAt}`),
+      Column({ gap: 0 }, [
+        DataTable({
+          rows: pageOrders,
+          rowKey: (row) => row.id,
+          columns: [
+            { key: "id", label: "Order", sortable: true },
+            {
+              key: "customer",
+              label: "Customer",
+              render: (order) =>
+                Column({ gap: 1 }, [
+                  Text(order.customer.name, { weight: 700, size: 13 }),
+                  Caption({ color: theme.muted }, order.customer.email),
+                ]),
+            },
+            { key: "placedAt", label: "Date", sortable: true },
+            {
+              key: "items",
+              label: "Items",
+              render: (order) =>
+                Caption({ color: theme.muted, maxLines: 1 }, orderItems(order)),
+            },
+            {
+              key: "status",
+              label: "Status",
+              render: (order) => StatusPill(order.status, statusColor(order.status)),
+            },
+            {
+              key: "total",
+              label: "Total",
+              align: "right",
+              sortable: true,
+              render: (order) =>
+                Text(formatMoney(order.total), { weight: 900, color: theme.primary }),
+            },
+            {
+              key: "actions",
+              label: "",
+              render: (order) =>
+                Dropdown({
+                  value: order.status,
+                  onChange: (status) => updateOrderStatus(order.id, status),
+                  options: [
+                    { label: "Processing", value: "processing" },
+                    { label: "Packed", value: "packed" },
+                    { label: "Shipped", value: "shipped" },
+                    { label: "Delivered", value: "delivered" },
+                    { label: "Cancelled", value: "cancelled" },
+                  ],
+                  style: { borderColor: theme.border, minWidth: "120px" },
+                }),
+            },
+          ],
+          dense: true,
+          style: { border: "none", boxShadow: "none", borderRadius: 0 },
+        }),
+        Container(
+          {
+            padding: { vertical: 10, horizontal: 14 },
+            style: { borderTop: `1px solid ${theme.border}` },
+          },
+          [
+            Row({ mainAxisAlignment: "spaceBetween", style: { alignItems: "center" } }, [
+              Caption({ color: theme.muted }, `Page ${page} of ${totalPages}`),
+              Pagination({
+                page,
+                pageSize,
+                totalItems: orders.length,
+                onPageChange: setAdminOrderPage,
+              }),
             ]),
-            StatusPill(order.status, statusColor(order.status)),
-          ]),
-          Caption({ color: theme.muted }, orderItems(order)),
-          Row({ 
-            mainAxisAlignment: "spaceBetween", 
-            gap: 10, 
-            className: "mobile-column mobile-gap",
-            style: { alignItems: "center" } 
-          }, [
-            Text(formatMoney(order.total), { color: theme.primary, weight: 900 }),
-            Dropdown({
-              value: order.status,
-              onChange: (status) => updateOrderStatus(order.id, status),
-              className: "mobile-full-width",
-              options: [
-                { label: "Processing", value: "processing" },
-                { label: "Packed", value: "packed" },
-                { label: "Shipped", value: "shipped" },
-                { label: "Delivered", value: "delivered" },
-                { label: "Cancelled", value: "cancelled" },
-              ],
-              style: { width: 150, borderColor: theme.border },
-            }),
-          ]),
-        ]),
+          ],
+        ),
       ]),
-      Divider({ color: theme.border, margin: 0 }),
     ],
   );
 }
@@ -1080,24 +1147,21 @@ function FilterPanel() {
         }),
         Column({ gap: 8 }, [
           Caption({ color: theme.muted }, "Category"),
-          Wrap(
-            { gap: 8, className: "mobile-gap" },
-            getCategories().map((category) =>
-              Button({
-                key: category,
-                text: category,
-                variant: getCategory() === category ? "primary" : "secondary",
-                onClick: () => setCategory(category),
-                style: {
-                  padding: "6px 10px",
-                  borderColor: theme.border,
-                  backgroundColor:
-                    getCategory() === category ? theme.primary : "#ffffff",
-                  color: getCategory() === category ? "#ffffff" : theme.text,
-                },
-              }),
-            ),
-          ),
+          ComboBox({
+            value: getCategory(),
+            inputValue: getCategoryInput(),
+            open: getCategoryOpen(),
+            options: getCategories().map((cat) => ({ label: cat, value: cat })),
+            onChange: (value) => {
+              setCategory(value || "All");
+              setCategoryInput("");
+            },
+            onInputChange: (value) => setCategoryInput(value),
+            onOpenChange: (open) => setCategoryOpen(open),
+            placeholder: "All categories",
+            clearable: true,
+            style: { borderColor: theme.border },
+          }),
         ]),
         Column({ gap: 8 }, [
           Row({ mainAxisAlignment: "spaceBetween" }, [
@@ -1771,106 +1835,95 @@ function SummaryRow(label, value, strong = false) {
 
 export function ProductDialog() {
   const product = selectedProduct();
-  if (!product) return null;
 
-  return Dialog(
-    {
-      open: true,
-      onDismiss: closeProduct,
-      width: "min(920px, calc(100vw - 32px))",
-      style: {
-        backgroundColor: theme.surface,
-      },
-    },
-    [
-      Row({ 
-        className: "mobile-column",
-        style: { flexWrap: "wrap", alignItems: "stretch" } 
-      }, [
-        Container(
-          {
-            width: "100%",
-            maxWidth: "420px",
-            className: "mobile-full-width",
-            style: { overflow: "hidden" },
-          },
-          [
-            Image({
-              src: product.image,
-              alt: product.name,
-              height: "100%",
-              fit: "cover",
-            }),
-          ],
-        ),
-        Expanded([
-          Padding({ padding: 22 }, [
-            Column({ gap: 14 }, [
+  return Overlay({ open: !!product, modal: true, onDismiss: closeProduct }, [
+    Row({ 
+      className: "mobile-column",
+      style: { flexWrap: "wrap", alignItems: "stretch" } 
+    }, [
+      Container(
+        {
+          width: "100%",
+          maxWidth: "420px",
+          className: "mobile-full-width",
+          style: { overflow: "hidden" },
+        },
+        [
+          Image({
+            src: product.image,
+            alt: product.name,
+            height: "100%",
+            fit: "cover",
+          }),
+        ],
+      ),
+      Expanded([
+        Padding({ padding: 22 }, [
+          Column({ gap: 14 }, [
+            Row({ 
+              mainAxisAlignment: "spaceBetween", 
+              gap: 12,
+              className: "mobile-column",
+            }, [
               Row({ 
-                mainAxisAlignment: "spaceBetween", 
-                gap: 12,
-                className: "mobile-column",
+                gap: 8, 
+                className: "mobile-stack",
+                style: { flexWrap: "wrap" } 
               }, [
-                Row({ 
-                  gap: 8, 
-                  className: "mobile-stack",
-                  style: { flexWrap: "wrap" } 
-                }, [
-                  ProductBadge(product.badge, theme.accent),
-                  DetailPill("Category", product.category),
-                ]),
-                Button({
-                  text: "Close",
-                  variant: "text",
-                  onClick: closeProduct,
-                }),
+                ProductBadge(product.badge, theme.accent),
+                DetailPill("Category", product.category),
               ]),
-              Heading({ level: 1, style: { color: theme.text } }, product.name),
-              Text(product.description, {
-                color: theme.muted,
-                lineHeight: 1.7,
-                as: "p",
+              Button({
+                text: "Close",
+                variant: "text",
+                onClick: closeProduct,
               }),
-              Row({ 
-                gap: 14, 
-                className: "mobile-stack mobile-gap",
-                style: { flexWrap: "wrap" } 
-              }, [
-                DetailPill("Price", formatMoney(product.price)),
-                DetailPill("Rating", `${product.rating} stars`),
-                DetailPill("Stock", `${product.stock} available`),
-              ]),
-              Divider({ color: theme.border }),
-              Row({ 
-                gap: 10, 
-                className: "mobile-column mobile-gap",
-                style: { flexWrap: "wrap" } 
-              }, [
-                Button({
-                  text: product.stock ? "Add to cart" : "Sold out",
-                  disabled: product.stock <= 0,
-                  onClick: () => {
-                    closeProduct();
-                    addToCart(product.id);
-                    setCartOpen(true);
-                  },
-                  style: {
-                    backgroundColor: theme.primary,
-                    color: "#ffffff",
-                  },
-                }),
-                Button({
-                  text: "Keep shopping",
-                  variant: "secondary",
-                  onClick: closeProduct,
-                }),
-              ]),
+            ]),
+            Heading({ level: 1, style: { color: theme.text } }, product.name),
+            Text(product.description, {
+              color: theme.muted,
+              lineHeight: 1.7,
+              as: "p",
+            }),
+            Row({ 
+              gap: 14, 
+              className: "mobile-stack mobile-gap",
+              style: { flexWrap: "wrap" } 
+            }, [
+              DetailPill("Price", formatMoney(product.price)),
+              DetailPill("Rating", `${product.rating} stars`),
+              DetailPill("Stock", `${product.stock} available`),
+            ]),
+            Divider({ color: theme.border }),
+            Row({ 
+              gap: 10, 
+              className: "mobile-column mobile-gap",
+              style: { flexWrap: "wrap" } 
+            }, [
+              Button({
+                text: product.stock ? "Add to cart" : "Sold out",
+                disabled: product.stock <= 0,
+                onClick: () => {
+                  closeProduct();
+                  addToCart(product.id);
+                  setCartOpen(true);
+                },
+                style: {
+                  backgroundColor: theme.primary,
+                  color: "#ffffff",
+                },
+              }),
+              Button({
+                text: "Keep shopping",
+                variant: "secondary",
+                onClick: closeProduct,
+              }),
             ]),
           ]),
         ]),
       ]),
-    ],
-  );
+    ]),
+  ]);
 }
 
 function DetailPill(label, value) {
@@ -1897,174 +1950,168 @@ export function CheckoutDialog() {
   const promo = activePromo();
   const stockIssues = cartStockIssues();
 
-  return Dialog(
-    {
-      open: getCheckoutOpen(),
-      onDismiss: () => setCheckoutOpen(false),
-      width: "min(760px, calc(100vw - 32px))",
-      style: {
-        backgroundColor: theme.surface,
-      },
-    },
-    [
-      Padding({ padding: 22 }, [
-        Column({ gap: 16 }, [
-          Row({ 
-            mainAxisAlignment: "spaceBetween", 
-            gap: 12,
-            className: "mobile-column",
-          }, [
-            Column({ gap: 4 }, [
-              Heading({ level: 2, style: { color: theme.text } }, "Checkout"),
-              Caption({ color: theme.muted }, "Complete your demo order."),
-            ]),
-            Button({
-              text: "Close",
-              variant: "text",
-              onClick: () => setCheckoutOpen(false),
-            }),
+  return Overlay({
+    open: getCheckoutOpen(),
+    modal: true,
+    onDismiss: () => setCheckoutOpen(false),
+  }, [
+    Padding({ padding: 22 }, [
+      Column({ gap: 16 }, [
+        Row({ 
+          mainAxisAlignment: "spaceBetween", 
+          gap: 12,
+          className: "mobile-column",
+        }, [
+          Column({ gap: 4 }, [
+            Heading({ level: 2, style: { color: theme.text } }, "Checkout"),
+            Caption({ color: theme.muted }, "Complete your demo order."),
           ]),
-          Form(
-            {
-              gap: 12,
-              onSubmit: placeOrder,
-            },
-            [
-              Row({ 
-                gap: 12, 
-                className: "mobile-column",
-                style: { flexWrap: "wrap" } 
-              }, [
-                Expanded([
-                  FormField({ label: "Full name", required: true }, [
-                    Input({
-                      value: getCheckoutName(),
-                      onChange: setCheckoutName,
-                      placeholder: "Amina Banda",
-                      style: { width: "100%", borderColor: theme.border },
-                    }),
-                  ]),
-                ]),
-                Expanded([
-                  FormField({ label: "Email", required: true }, [
-                    Input({
-                      type: "email",
-                      value: getCheckoutEmail(),
-                      onChange: setCheckoutEmail,
-                      placeholder: "amina@example.com",
-                      style: { width: "100%", borderColor: theme.border },
-                    }),
-                  ]),
-                ]),
-              ]),
-              FormField({ label: "Delivery notes" }, [
-                TextArea({
-                  value: getCheckoutNotes(),
-                  onChange: setCheckoutNotes,
-                  rows: 3,
-                  placeholder: "Apartment, gate code, preferred delivery time...",
-                  style: { borderColor: theme.border },
-                }),
-              ]),
-              Row({ 
-                gap: 12, 
-                className: "mobile-column",
-                style: { flexWrap: "wrap" } 
-              }, [
-                Expanded([
-                  FormField({ label: "Shipping" }, [
-                    RadioGroup({
-                      value: getShipping(),
-                      onChange: setShipping,
-                      options: [
-                        { label: "Standard", value: "standard" },
-                        { label: "Express", value: "express" },
-                      ],
-                    }),
-                  ]),
-                ]),
-                Expanded([
-                  FormField({ label: "Payment" }, [
-                    RadioGroup({
-                      value: getPayment(),
-                      onChange: setPayment,
-                      options: [
-                        { label: "Card", value: "card" },
-                        { label: "Mobile money", value: "mobile" },
-                      ],
-                    }),
-                  ]),
-                ]),
-              ]),
-              PromoBox(),
-              stockIssues.length
-                ? Container(
-                    {
-                      padding: 12,
-                      decoration: {
-                        color: "#fef2f2",
-                        border: "1px solid #fecaca",
-                        borderRadius: 8,
-                      },
-                    },
-                    [
-                      Caption(
-                        { color: theme.danger },
-                        "Resolve stock issues in cart before placing the order.",
-                      ),
-                    ],
-                  )
-                : null,
-              Container(
-                {
-                  padding: 14,
-                  decoration: {
-                    color: theme.surfaceAlt,
-                    border: `1px solid ${theme.border}`,
-                    borderRadius: 10,
-                  },
-                },
-                [
-                  Column({ gap: 8 }, [
-                    SummaryRow("Subtotal", formatMoney(cartSubtotal())),
-                    discount
-                      ? SummaryRow(promo?.code || "Discount", `-${formatMoney(discount)}`)
-                      : null,
-                    SummaryRow("Shipping", formatMoney(shippingCost())),
-                    SummaryRow("Total", formatMoney(orderTotal()), true),
-                  ]),
-                ],
-              ),
-              Row({ 
-                mainAxisAlignment: "end", 
-                gap: 10, 
-                className: "mobile-column",
-                style: { flexWrap: "wrap" } 
-              }, [
-                Button({
-                  text: "Back to cart",
-                  variant: "secondary",
-                  onClick: () => {
-                    setCheckoutOpen(false);
-                    setCartOpen(true);
-                  },
-                }),
-                Button({
-                  text: "Place order",
-                  type: "submit",
-                  disabled: cartQuantity() === 0 || stockIssues.length > 0,
-                  style: {
-                    backgroundColor: theme.primary,
-                    color: "#ffffff",
-                  },
-                }),
-              ]),
-            ],
-          ),
+          Button({
+            text: "Close",
+            variant: "text",
+            onClick: () => setCheckoutOpen(false),
+          }),
         ]),
+        Form(
+          {
+            gap: 12,
+            onSubmit: placeOrder,
+          },
+          [
+            Row({ 
+              gap: 12, 
+              className: "mobile-column",
+              style: { flexWrap: "wrap" } 
+            }, [
+              Expanded([
+                FormField({ label: "Full name", required: true }, [
+                  Input({
+                    value: getCheckoutName(),
+                    onChange: setCheckoutName,
+                    placeholder: "Amina Banda",
+                    style: { width: "100%", borderColor: theme.border },
+                  }),
+                ]),
+              ]),
+              Expanded([
+                FormField({ label: "Email", required: true }, [
+                  Input({
+                    type: "email",
+                    value: getCheckoutEmail(),
+                    onChange: setCheckoutEmail,
+                    placeholder: "amina@example.com",
+                    style: { width: "100%", borderColor: theme.border },
+                  }),
+                ]),
+              ]),
+            ]),
+            FormField({ label: "Delivery notes" }, [
+              TextArea({
+                value: getCheckoutNotes(),
+                onChange: setCheckoutNotes,
+                rows: 3,
+                placeholder: "Apartment, gate code, preferred delivery time...",
+                style: { borderColor: theme.border },
+              }),
+            ]),
+            Row({ 
+              gap: 12, 
+              className: "mobile-column",
+              style: { flexWrap: "wrap" } 
+            }, [
+              Expanded([
+                FormField({ label: "Shipping" }, [
+                  RadioGroup({
+                    value: getShipping(),
+                    onChange: setShipping,
+                    options: [
+                      { label: "Standard", value: "standard" },
+                      { label: "Express", value: "express" },
+                    ],
+                  }),
+                ]),
+              ]),
+              Expanded([
+                FormField({ label: "Payment" }, [
+                  RadioGroup({
+                    value: getPayment(),
+                    onChange: setPayment,
+                    options: [
+                      { label: "Card", value: "card" },
+                      { label: "Mobile money", value: "mobile" },
+                    ],
+                  }),
+                ]),
+              ]),
+            ]),
+            PromoBox(),
+            stockIssues.length
+              ? Container(
+                  {
+                    padding: 12,
+                    decoration: {
+                      color: "#fef2f2",
+                      border: "1px solid #fecaca",
+                      borderRadius: 8,
+                    },
+                  },
+                  [
+                    Caption(
+                      { color: theme.danger },
+                      "Resolve stock issues in cart before placing the order.",
+                    ),
+                  ],
+                )
+              : null,
+            Container(
+              {
+                padding: 14,
+                decoration: {
+                  color: theme.surfaceAlt,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 10,
+                },
+              },
+              [
+                Column({ gap: 8 }, [
+                  SummaryRow("Subtotal", formatMoney(cartSubtotal())),
+                  discount
+                    ? SummaryRow(promo?.code || "Discount", `-${formatMoney(discount)}`)
+                    : null,
+                  SummaryRow("Shipping", formatMoney(shippingCost())),
+                  SummaryRow("Total", formatMoney(orderTotal()), true),
+                ]),
+              ],
+            ),
+            Row({ 
+              mainAxisAlignment: "end", 
+              gap: 10, 
+              className: "mobile-column",
+              style: { flexWrap: "wrap" } 
+            }, [
+              Button({
+                text: "Back to cart",
+                variant: "secondary",
+                onClick: () => {
+                  setCheckoutOpen(false);
+                  setCartOpen(true);
+                },
+              }),
+              Button({
+                text: "Place order",
+                type: "submit",
+                disabled: cartQuantity() === 0 || stockIssues.length > 0,
+                style: {
+                  backgroundColor: theme.primary,
+                  color: "#ffffff",
+                },
+              }),
+            ]),
+          ],
+        ),
       ]),
-    ],
-  );
+    ]),
+  ]);
 }
 
 export function StoreSnackBar() {

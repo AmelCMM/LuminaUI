@@ -172,11 +172,21 @@ const {
   AbsorbPointer,
   Button,
   Column,
+  ComboBox,
+  createRouter,
+  createTheme,
+  DataTable,
+  filterOptions,
   Input,
   ListView,
+  Menu,
+  Overlay,
+  Pagination,
+  Router,
   SnackBar,
   Switch,
   Text,
+  ThemeProvider,
   mount,
 } = await import("../lumina-ui.js");
 const store = await import("../lumina-ui/app/ecommerce/store.js");
@@ -258,6 +268,124 @@ store.toggleCompare("arc-speaker");
 assert(store.compareProducts().length === 2, "compare selection failed");
 store.clearCompare();
 assert(store.compareProducts().length === 0, "compare clear failed");
+
+const themedRoot = new ElementNode("root");
+const brandTheme = createTheme({ colors: { primary: "#0f766e" } });
+mount(
+  () =>
+    ThemeProvider({ theme: brandTheme }, [
+      Button({ text: "Themed" }),
+    ]),
+  themedRoot,
+);
+assert(
+  themedRoot.childNodes[0].style["--lumina-color-primary"] === "#0f766e",
+  "ThemeProvider did not apply CSS theme variables",
+);
+
+const router = createRouter({
+  initialPath: "/",
+  routes: [
+    { path: "/", child: Text("Route home") },
+    {
+      path: "/products/:id",
+      component: ({ params }) => Text(`Product ${params.id}`),
+    },
+  ],
+});
+const routerRoot = new ElementNode("root");
+mount(() => Router({ router }), routerRoot);
+assert(routerRoot.textContent === "Route home", "router initial route failed");
+router.navigate("/products/42");
+assert(routerRoot.textContent === "Product 42", "router navigation failed");
+
+const overlayRoot = new ElementNode("root");
+mount(
+  () =>
+    Overlay({ open: true, modal: true }, [
+      Text("Overlay content"),
+    ]),
+  overlayRoot,
+);
+assert(
+  overlayRoot.textContent === "Overlay content",
+  "overlay content failed to render",
+);
+
+let menuValue = "";
+const menuRoot = new ElementNode("root");
+mount(
+  () =>
+    Menu({
+      items: [{ label: "Edit", value: "edit" }],
+      onSelect: (value) => {
+        menuValue = value;
+      },
+    }),
+  menuRoot,
+);
+menuRoot.childNodes[0].childNodes[0].click();
+assert(menuValue === "edit", "menu item selection failed");
+
+const tableRoot = new ElementNode("root");
+mount(
+  () =>
+    DataTable({
+      rows: [
+        { id: "b", name: "Beta" },
+        { id: "a", name: "Alpha" },
+      ],
+      sortBy: "name",
+      columns: [{ key: "name", label: "Name", sortable: true }],
+    }),
+  tableRoot,
+);
+assert(
+  tableRoot.textContent.includes("Alpha") &&
+    tableRoot.textContent.indexOf("Alpha") < tableRoot.textContent.indexOf("Beta"),
+  "DataTable sorting failed",
+);
+
+let page = 1;
+const paginationRoot = new ElementNode("root");
+mount(
+  () =>
+    Pagination({
+      page,
+      pageSize: 10,
+      totalItems: 30,
+      onPageChange: (nextPage) => {
+        page = nextPage;
+      },
+    }),
+  paginationRoot,
+);
+paginationRoot.childNodes[0].childNodes[2].click();
+assert(page === 2, "pagination page change failed");
+
+let comboValue = "";
+const comboRoot = new ElementNode("root");
+mount(
+  () =>
+    ComboBox({
+      open: true,
+      value: comboValue,
+      options: [
+        { label: "Alpha", value: "alpha" },
+        { label: "Beta", value: "beta" },
+      ],
+      onChange: (value) => {
+        comboValue = value;
+      },
+    }),
+  comboRoot,
+);
+comboRoot.childNodes[0].childNodes[2].childNodes[1].click();
+assert(comboValue === "beta", "ComboBox option selection failed");
+assert(
+  filterOptions(["Alpha", "Beta"], "alp").length === 1,
+  "Autocomplete option filtering failed",
+);
 
 store.addToCart("pulse-headphones", 1);
 store.setPromoCode("FOCUS10");

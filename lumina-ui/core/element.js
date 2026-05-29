@@ -17,7 +17,7 @@ export function createElement(tag, props = {}) {
 
   // Apply styles
   if (style && typeof style === "object") {
-    Object.assign(element.style, style);
+    setStyleObject(element, style);
   }
 
   // Apply remaining props (reflecting properties for common DOM props)
@@ -99,7 +99,7 @@ export function Fragment({ children }) {
 
 export function applyStyles(element, styles) {
   if (!element || !styles) return element;
-  Object.assign(element.style, styles);
+  setStyleObject(element, styles);
   return element;
 }
 
@@ -115,4 +115,15 @@ function normalizeEventName(onName) {
   const lower = name.toLowerCase();
   if (lower === "doubleclick" || lower === "dblclick") return "dblclick";
   return lower;
+}
+
+function setStyleObject(element, styles) {
+  Object.entries(styles).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    if (key.startsWith("--") && element.style.setProperty) {
+      element.style.setProperty(key, String(value));
+    } else {
+      element.style[key] = value;
+    }
+  });
 }

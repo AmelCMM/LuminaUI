@@ -83,6 +83,14 @@ export const [getAdminDraft, setAdminDraft, subscribeAdminDraft] =
   createState(emptyDraft());
 export const [getAdminEditingId, setAdminEditingId, subscribeAdminEditing] =
   createState(null);
+export const [getAdminProductPage, setAdminProductPage, subscribeAdminProductPage] =
+  createState(1);
+export const [getAdminOrderPage, setAdminOrderPage, subscribeAdminOrderPage] =
+  createState(1);
+export const [getCategoryInput, setCategoryInput, subscribeCategoryInput] =
+  createState("");
+export const [getCategoryOpen, setCategoryOpen, subscribeCategoryOpen] =
+  createState(false);
 
 export const subscriptions = [
   subscribeProducts,
@@ -113,6 +121,10 @@ export const subscriptions = [
   subscribeCheckoutNotes,
   subscribeAdminDraft,
   subscribeAdminEditing,
+  subscribeAdminProductPage,
+  subscribeAdminOrderPage,
+  subscribeCategoryInput,
+  subscribeCategoryOpen,
 ];
 
 let catalogPromise = null;

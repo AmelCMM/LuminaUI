@@ -2,7 +2,7 @@ export function isDomNode(value) {
   return typeof Node !== "undefined" && value instanceof Node;
 }
 
-export const luminaTheme = {
+export const luminaDefaultTheme = {
   colors: {
     primary: "#2563eb",
     primaryDark: "#1d4ed8",
@@ -37,6 +37,63 @@ export const luminaTheme = {
   },
   transition: "160ms ease",
 };
+
+function kebabCase(value) {
+  return String(value).replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
+}
+
+function cssVar(group, key, fallback) {
+  return `var(--lumina-${group}-${kebabCase(key)}, ${fallback})`;
+}
+
+function tokenGroup(group, values) {
+  return Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [key, cssVar(group, key, value)]),
+  );
+}
+
+export const luminaTheme = {
+  colors: tokenGroup("color", luminaDefaultTheme.colors),
+  radius: tokenGroup("radius", luminaDefaultTheme.radius),
+  shadow: tokenGroup("shadow", luminaDefaultTheme.shadow),
+  transition: `var(--lumina-transition, ${luminaDefaultTheme.transition})`,
+};
+
+export function createTheme(overrides = {}) {
+  return {
+    colors: {
+      ...luminaDefaultTheme.colors,
+      ...(overrides.colors || {}),
+    },
+    radius: {
+      ...luminaDefaultTheme.radius,
+      ...(overrides.radius || {}),
+    },
+    shadow: {
+      ...luminaDefaultTheme.shadow,
+      ...(overrides.shadow || {}),
+    },
+    transition: overrides.transition ?? luminaDefaultTheme.transition,
+  };
+}
+
+export function themeToCssVariables(theme = {}) {
+  const merged = createTheme(theme);
+  const variables = {};
+
+  Object.entries(merged.colors).forEach(([key, value]) => {
+    variables[`--lumina-color-${kebabCase(key)}`] = value;
+  });
+  Object.entries(merged.radius).forEach(([key, value]) => {
+    variables[`--lumina-radius-${kebabCase(key)}`] = value;
+  });
+  Object.entries(merged.shadow).forEach(([key, value]) => {
+    variables[`--lumina-shadow-${kebabCase(key)}`] = value;
+  });
+  variables["--lumina-transition"] = merged.transition;
+
+  return variables;
+}
 
 export function isVNode(value) {
   return value && typeof value === "object" && typeof value.tag === "string";
@@ -218,4 +275,22 @@ export function ensureGlobalStyle(id, css) {
   style.id = id;
   style.textContent = css;
   document.head.appendChild(style);
+}
+
+export function upsertGlobalStyle(id, css) {
+  if (
+    typeof document === "undefined" ||
+    !document.head ||
+    typeof document.getElementById !== "function"
+  ) {
+    return;
+  }
+
+  const existing = document.getElementById(id);
+  if (existing) {
+    existing.textContent = css;
+    return;
+  }
+
+  ensureGlobalStyle(id, css);
 }

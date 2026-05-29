@@ -10,7 +10,17 @@ export {
   applyStyles,
   addClasses,
 } from "./lumina-ui/core/element.js";
-export { luminaTheme } from "./lumina-ui/widgets/utils.js";
+export {
+  createTheme,
+  luminaDefaultTheme,
+  luminaTheme,
+  themeToCssVariables,
+} from "./lumina-ui/widgets/utils.js";
+export {
+  GlobalTheme,
+  ThemeProvider,
+  ThemeScope,
+} from "./lumina-ui/widgets/theme.js";
 
 export {
   Column,
@@ -103,6 +113,38 @@ export {
   TabBar,
   TabBarView,
 } from "./lumina-ui/widgets/navigation.js";
+export {
+  createRouter,
+  defaultRouter,
+  isRouteActive,
+  Link,
+  matchPath,
+  matchRoute,
+  NavLink,
+  Router,
+  RouteView,
+} from "./lumina-ui/widgets/routing.js";
+export {
+  Menu,
+  MenuDivider,
+  MenuItem,
+  Overlay,
+  OverlayEntry,
+  Popover,
+  PopupMenuButton,
+} from "./lumina-ui/widgets/overlay.js";
+export {
+  DataTable,
+  Pagination,
+  paginationRange,
+  sortRows,
+} from "./lumina-ui/widgets/data.js";
+export {
+  AutoComplete,
+  Autocomplete,
+  ComboBox,
+  filterOptions,
+} from "./lumina-ui/widgets/selection.js";
 export {
   AnimatedContainer,
   AnimatedOpacity,
