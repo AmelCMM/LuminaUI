@@ -106,7 +106,9 @@ function renderWidget(widget, forceUpdate) {
 
     if (widget.tag) {
       const props = widget.props || {};
-      const children = flattenChildren(widget.children || []);
+      const children = typeof widget.children === "function"
+        ? flattenChildren(widget.children(forceUpdate))
+        : flattenChildren(widget.children || []);
 
       const element = createElement(widget.tag, {
         ...(props || {}),
@@ -146,7 +148,9 @@ function normalizeVNode(v, forceUpdate = null) {
   if (v && v.tag) {
     return {
       ...v,
-      children: flattenChildren(v.children || []),
+      children: typeof v.children === "function"
+        ? flattenChildren(v.children(forceUpdate))
+        : flattenChildren(v.children || []),
     };
   }
   return { tag: "text", children: [String(v)] };
@@ -381,11 +385,12 @@ function resolveWidget(widget, forceUpdate) {
   }
 
   if (widget && widget.tag) {
+    const raw = typeof widget.children === "function"
+      ? flattenChildren(widget.children(forceUpdate))
+      : flattenChildren(widget.children || []);
     return {
       ...widget,
-      children: flattenChildren(widget.children || []).map((child) =>
-        resolveWidget(child, forceUpdate),
-      ),
+      children: raw.map((child) => resolveWidget(child, forceUpdate)),
     };
   }
 

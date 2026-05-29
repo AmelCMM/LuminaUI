@@ -115,7 +115,12 @@ export function isRenderable(value) {
 
 export function childrenOf(children) {
   if (children === null || children === undefined) return [];
+  if (typeof children === "function") return children;
   return Array.isArray(children) ? children : [children];
+}
+
+export function when(condition, factory) {
+  return condition ? factory() : null;
 }
 
 export function normalizeWidgetArgs(

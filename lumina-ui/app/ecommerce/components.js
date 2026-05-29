@@ -1835,9 +1835,8 @@ function SummaryRow(label, value, strong = false) {
 
 export function ProductDialog() {
   const product = selectedProduct();
-  if (!product) return null;
 
-  return Overlay({ open: true, modal: true, onDismiss: closeProduct }, [
+  return Overlay({ open: !!product, modal: true, onDismiss: closeProduct }, () => [
     Row({ 
       className: "mobile-column",
       style: { flexWrap: "wrap", alignItems: "stretch" } 
@@ -1947,16 +1946,16 @@ function DetailPill(label, value) {
 }
 
 export function CheckoutDialog() {
-  const discount = discountAmount();
-  const promo = activePromo();
-  const stockIssues = cartStockIssues();
-
   return Overlay({
     open: getCheckoutOpen(),
     modal: true,
     onDismiss: () => setCheckoutOpen(false),
-  }, [
-    Padding({ padding: 22 }, [
+  }, () => {
+    const discount = discountAmount();
+    const promo = activePromo();
+    const stockIssues = cartStockIssues();
+    return [
+      Padding({ padding: 22 }, [
       Column({ gap: 16 }, [
         Row({ 
           mainAxisAlignment: "spaceBetween", 
@@ -2112,7 +2111,8 @@ export function CheckoutDialog() {
         ),
       ]),
     ]),
-  ]);
+    ];
+  });
 }
 
 export function StoreSnackBar() {
