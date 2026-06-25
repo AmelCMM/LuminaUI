@@ -443,4 +443,58 @@ const stackUpdate = mount(
 stackRoot.childNodes[0].childNodes[1].click();
 assert(stackRoot.textContent === "", "snackbar dismiss failed");
 
+let listItems = ["a", "b", "c", "d"];
+const listRoot = new ElementNode("root");
+const listUpdate = mount(
+  () => ({
+    tag: "ul",
+    children: listItems.map((t) => ({ tag: "li", children: [t] })),
+  }),
+  listRoot,
+);
+listItems = ["a"];
+listUpdate();
+assert(
+  listRoot.childNodes[0].childNodes.length === 1 &&
+    listRoot.textContent === "a",
+  "non-keyed list did not remove stale nodes when it shrank",
+);
+listItems = ["x", "y", "z"];
+listUpdate();
+assert(
+  listRoot.textContent === "xyz",
+  "non-keyed list failed to grow back after shrinking",
+);
+
+let mixToggle = 0;
+const mixRoot = new ElementNode("root");
+const mixUpdate = mount(
+  () => ({
+    tag: "div",
+    children: [
+      { tag: "span", children: [`unkeyed-${mixToggle}`] },
+      { tag: "span", key: "k1", children: ["keyed"] },
+    ],
+  }),
+  mixRoot,
+);
+const unkeyedBefore = mixRoot.childNodes[0].childNodes[0];
+mixToggle = 1;
+mixUpdate();
+assert(
+  mixRoot.childNodes[0].childNodes[0] === unkeyedBefore &&
+    mixRoot.textContent === "unkeyed-1keyed",
+  "unkeyed sibling of a keyed child was recreated instead of patched",
+);
+
+const notifyRouter = createRouter({ initialPath: "/" });
+let routerNotifies = 0;
+notifyRouter.subscribe(() => {
+  routerNotifies += 1;
+});
+notifyRouter.navigate("/");
+assert(routerNotifies === 0, "router notified subscribers on unchanged path");
+notifyRouter.navigate("/elsewhere");
+assert(routerNotifies === 1, "router failed to notify on a real path change");
+
 console.log("smoke ok");

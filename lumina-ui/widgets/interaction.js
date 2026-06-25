@@ -11,17 +11,26 @@ export function GestureDetector(
   maybeChildren = undefined,
 ) {
   const [props, children] = normalizeWidgetArgs(propsOrChildren, maybeChildren);
-  let longPressTimer = null;
-  let removePointerListeners = null;
 
-  const clearLongPress = () => {
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
+  // Long-press state is stored on the DOM element rather than in this closure,
+  // because the widget factory (and its handlers) is recreated on every render;
+  // an in-flight long press must survive re-renders that reuse the same element.
+  const gestureStateOf = (event) => {
+    const el = event && (event.currentTarget || event.target);
+    if (!el) return { el: null, state: {} };
+    if (!el.__luminaGesture) el.__luminaGesture = {};
+    return { el, state: el.__luminaGesture };
+  };
+
+  const clearLongPress = (event) => {
+    const { state } = gestureStateOf(event);
+    if (state.timer) {
+      clearTimeout(state.timer);
+      state.timer = null;
     }
-    if (removePointerListeners) {
-      removePointerListeners();
-      removePointerListeners = null;
+    if (state.removePointerListeners) {
+      state.removePointerListeners();
+      state.removePointerListeners = null;
     }
   };
 
@@ -43,43 +52,43 @@ export function GestureDetector(
       onPointerDown: (event) => {
         if (props.onPanStart) props.onPanStart(event);
         if (props.onLongPress) {
-          clearLongPress();
+          clearLongPress(event);
+          const { el, state } = gestureStateOf(event);
           const pointerId = event.pointerId;
-          const target = event.currentTarget || event.target;
           if (typeof window !== "undefined" && window.addEventListener) {
             const onPointerDone = (pointerEvent) => {
               if (pointerId == null || pointerEvent.pointerId === pointerId) {
-                clearLongPress();
+                clearLongPress(event);
               }
             };
             window.addEventListener("pointerup", onPointerDone, true);
             window.addEventListener("pointercancel", onPointerDone, true);
-            removePointerListeners = () => {
+            state.removePointerListeners = () => {
               window.removeEventListener("pointerup", onPointerDone, true);
               window.removeEventListener("pointercancel", onPointerDone, true);
             };
           }
-          longPressTimer = setTimeout(() => {
-            longPressTimer = null;
-            if (removePointerListeners) {
-              removePointerListeners();
-              removePointerListeners = null;
+          state.timer = setTimeout(() => {
+            state.timer = null;
+            if (state.removePointerListeners) {
+              state.removePointerListeners();
+              state.removePointerListeners = null;
             }
-            if (target && target.isConnected === false) return;
+            if (el && el.isConnected === false) return;
             props.onLongPress(event);
           }, props.longPressDelay ?? 500);
         }
       },
       onPointerMove: (event) => {
-        clearLongPress();
+        clearLongPress(event);
         if (props.onPanUpdate) props.onPanUpdate(event);
       },
       onPointerUp: (event) => {
-        clearLongPress();
+        clearLongPress(event);
         if (props.onPanEnd) props.onPanEnd(event);
       },
       onPointerCancel: (event) => {
-        clearLongPress();
+        clearLongPress(event);
         if (props.onPointerCancel) props.onPointerCancel(event);
       },
       style: cleanStyle({

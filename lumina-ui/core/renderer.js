@@ -218,12 +218,25 @@ function patchWidget(parent, oldWidget, newWidget, index = 0, currentDom = null,
     const anyKeyed = newChildren.some((c) => widgetKey(c) != null);
     if (anyKeyed) {
       const usedKeys = new Set();
+      // Old children without keys, kept in document order so they can be
+      // patched in place (and not destroyed) when they sit beside keyed siblings.
+      const unkeyedOld = [];
+      oldChildren.forEach((c, i) => {
+        if (widgetKey(c) == null) {
+          const node = dom.childNodes[i];
+          if (node) unkeyedOld.push({ vnode: c, node });
+        }
+      });
+      let unkeyedCursor = 0;
       newChildren.forEach((nc, i) => {
         const nk = widgetKey(nc);
         let node;
         if (nk != null && keyed.has(nk)) {
           const oldEntry = keyed.get(nk);
           usedKeys.add(nk);
+          node = patchWidget(dom, oldEntry.vnode, nc, 0, oldEntry.node, forceUpdate);
+        } else if (nk == null && unkeyedCursor < unkeyedOld.length) {
+          const oldEntry = unkeyedOld[unkeyedCursor++];
           node = patchWidget(dom, oldEntry.vnode, nc, 0, oldEntry.node, forceUpdate);
         } else {
           node = renderWidget(nc, forceUpdate);
@@ -234,28 +247,37 @@ function patchWidget(parent, oldWidget, newWidget, index = 0, currentDom = null,
       keyed.forEach((entry, key) => {
         if (!usedKeys.has(key) && entry.node.parentNode === dom) dom.removeChild(entry.node);
       });
+      for (let c = unkeyedCursor; c < unkeyedOld.length; c++) {
+        const stale = unkeyedOld[c].node;
+        if (stale.parentNode === dom) dom.removeChild(stale);
+      }
       while (dom.childNodes.length > newChildren.length) dom.removeChild(dom.lastChild);
       return dom;
     }
 
-    const maxLen = Math.max(oldChildren.length, newChildren.length);
-    for (let i = 0; i < maxLen; i++) {
+    const commonLen = Math.min(oldChildren.length, newChildren.length);
+    for (let i = 0; i < commonLen; i++) {
       const oldC = oldChildren[i];
       const newC = newChildren[i];
       const oldEmpty = isEmptyWidget(oldC);
       const newEmpty = isEmptyWidget(newC);
       if (oldEmpty && newEmpty) continue;
-      if (oldEmpty && !newEmpty) {
-        const newDom = renderWidget(newC, forceUpdate);
-        if (dom.childNodes[i]) dom.replaceChild(newDom, dom.childNodes[i]);
-        else dom.insertBefore(newDom, dom.childNodes[i] || null);
-      } else if (!oldEmpty && newEmpty) {
-        const emptyDom = renderWidget(newC, forceUpdate);
-        if (dom.childNodes[i]) dom.replaceChild(emptyDom, dom.childNodes[i]);
-        else dom.insertBefore(emptyDom, dom.childNodes[i] || null);
+      if (oldEmpty !== newEmpty) {
+        const replacement = renderWidget(newC, forceUpdate);
+        if (dom.childNodes[i]) dom.replaceChild(replacement, dom.childNodes[i]);
+        else dom.insertBefore(replacement, dom.childNodes[i] || null);
       } else {
         patchWidget(dom, oldC, newC, i, null, forceUpdate);
       }
+    }
+    // Append children added at the tail.
+    for (let i = oldChildren.length; i < newChildren.length; i++) {
+      const added = renderWidget(newChildren[i], forceUpdate);
+      if (added) dom.appendChild(added);
+    }
+    // Remove stale trailing nodes when the list shrank.
+    while (dom.childNodes.length > newChildren.length) {
+      dom.removeChild(dom.lastChild);
     }
     return dom;
   } catch (error) {

@@ -10,7 +10,9 @@ function createErrorBus() {
     globalHandlersSet = true;
 
     window.addEventListener("error", (event) => {
-      capture(event.error || event, {
+      const error =
+        event.error || new Error(event.message || "Unknown error");
+      capture(error, {
         source: "unhandled",
         phase: "global",
         message: event.message,

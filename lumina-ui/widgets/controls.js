@@ -150,11 +150,10 @@ export function Input({
             },
           }
         : {
+            // Fire onChange continuously from the input event (React-style).
+            // A separate DOM `change` handler would double-invoke onChange.
             onInput: (e) => {
               if (onInput) onInput(e);
-              if (onChange) onChange(e.target.value);
-            },
-            onChange: (e) => {
               if (onChange) onChange(e.target.value);
             },
           }),

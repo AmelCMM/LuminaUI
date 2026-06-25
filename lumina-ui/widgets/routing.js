@@ -33,7 +33,10 @@ export function createRouter(options = {}) {
       }
 
       currentPath = nextPath;
-      if (changed || navigateOptions.notify !== false) notify();
+      const shouldNotify =
+        navigateOptions.notify === true ||
+        (changed && navigateOptions.notify !== false);
+      if (shouldNotify) notify();
     },
     setRoutes: (nextRoutes = [], { notify: shouldNotify = false } = {}) => {
       routes = nextRoutes;
