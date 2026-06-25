@@ -19,6 +19,7 @@ html {
 
 export { mount } from "./lumina-ui/core/renderer.js";
 export { errorBus } from "./lumina-ui/core/errors.js";
+export { DevTools } from "./lumina-ui/widgets/devtools.js";
 export {
   createState as useState,
   useEffect,

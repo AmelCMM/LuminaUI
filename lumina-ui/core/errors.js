@@ -60,13 +60,23 @@ function createErrorBus() {
     });
   }
 
+  function remove(id) {
+    const index = entries.findIndex((entry) => entry.id === id);
+    if (index === -1) return false;
+    entries.splice(index, 1);
+    listeners.forEach((fn) => {
+      try { fn({ type: "remove", id }); } catch (e) { /* swallow */ }
+    });
+    return true;
+  }
+
   function getEntries() {
     return entries;
   }
 
   setupGlobalHandlers();
 
-  return { capture, subscribe, clear, getEntries };
+  return { capture, subscribe, clear, remove, getEntries };
 }
 
 export const errorBus = createErrorBus();

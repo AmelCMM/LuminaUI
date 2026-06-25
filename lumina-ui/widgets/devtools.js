@@ -214,15 +214,63 @@ function stackLines(raw) {
     .filter((l) => l && !l.includes("node_modules") && !l.includes("/errors.js"));
 }
 
+const devtoolsSubscriptions = new WeakMap();
+
+// Subscribe a render's forceUpdate to the error bus exactly once so the overlay
+// refreshes as errors arrive. Errors thrown *during* render are skipped here:
+// re-rendering in reaction to them would throw again and spin forever. They
+// still surface on the next natural render. Bus signals (clear/remove) and
+// runtime errors (event/state/effect/unhandled) safely schedule a refresh.
+function subscribeErrorBus(forceUpdate) {
+  if (typeof forceUpdate !== "function" || devtoolsSubscriptions.has(forceUpdate)) {
+    return;
+  }
+  devtoolsSubscriptions.set(forceUpdate, true);
+
+  let scheduled = false;
+  const requestRender = () => {
+    if (scheduled) return;
+    scheduled = true;
+    const run = () => {
+      scheduled = false;
+      forceUpdate();
+    };
+    if (typeof queueMicrotask === "function") queueMicrotask(run);
+    else setTimeout(run, 0);
+  };
+
+  const cleanup = errorBus.subscribe((entry) => {
+    if (entry && entry.source === "render") return;
+    requestRender();
+  });
+
+  if (typeof forceUpdate.onUnmount === "function") {
+    forceUpdate.onUnmount(() => {
+      cleanup();
+      devtoolsSubscriptions.delete(forceUpdate);
+    });
+  }
+}
+
 export function DevTools({ open = false, onOpenChange, maxErrors = 50 } = {}) {
   injectDevToolsStyles();
 
-  const entries = errorBus.getEntries();
-  const errorCount = entries.length;
-  const visible = errorCount > 0 ? entries.slice(-maxErrors) : [];
-  const hasErrors = errorCount > 0;
+  return (forceUpdate) => {
+    subscribeErrorBus(forceUpdate);
 
-  return [
+    const entries = errorBus.getEntries();
+    const errorCount = entries.length;
+    const visible = errorCount > 0 ? entries.slice(-maxErrors) : [];
+    const hasErrors = errorCount > 0;
+
+    const setOpen = (next) => {
+      if (onOpenChange) onOpenChange(next);
+      // The caller's open state may not be wired to this render; force a
+      // refresh so the panel reliably opens/closes on its own.
+      if (typeof forceUpdate === "function") forceUpdate();
+    };
+
+    return [
     {
       tag: "button",
       props: {
@@ -231,7 +279,7 @@ export function DevTools({ open = false, onOpenChange, maxErrors = 50 } = {}) {
         title: `${errorCount} error${errorCount !== 1 ? "s" : ""}`,
         onClick: (e) => {
           e.stopPropagation();
-          if (onOpenChange) onOpenChange(!open);
+          setOpen(!open);
         },
       },
       children: [
@@ -274,7 +322,10 @@ export function DevTools({ open = false, onOpenChange, maxErrors = 50 } = {}) {
                           tag: "button",
                           props: {
                             className: "lumina-devtools-btn-sm",
-                            onClick: () => errorBus.clear(),
+                            onClick: () => {
+                              errorBus.clear();
+                              if (typeof forceUpdate === "function") forceUpdate();
+                            },
                           },
                           children: ["Clear"],
                         }
@@ -283,7 +334,7 @@ export function DevTools({ open = false, onOpenChange, maxErrors = 50 } = {}) {
                       tag: "button",
                       props: {
                         className: "lumina-devtools-btn-sm",
-                        onClick: () => onOpenChange?.(false),
+                        onClick: () => setOpen(false),
                       },
                       children: ["Close"],
                     },
@@ -296,7 +347,6 @@ export function DevTools({ open = false, onOpenChange, maxErrors = 50 } = {}) {
               props: { className: "lumina-devtools-entries" },
               children: visible.length
                 ? visible.map((entry) => {
-                    const expanded = entry._expanded;
                     return {
                       tag: "div",
                       props: {
@@ -324,7 +374,10 @@ export function DevTools({ open = false, onOpenChange, maxErrors = 50 } = {}) {
                               tag: "span",
                               props: {
                                 className: "lumina-devtools-entry-msg",
-                                onClick: () => { entry._expanded = !entry._expanded; },
+                                onClick: () => {
+                                  entry._expanded = !entry._expanded;
+                                  if (typeof forceUpdate === "function") forceUpdate();
+                                },
                               },
                               children: [entry.message],
                             },
@@ -335,8 +388,8 @@ export function DevTools({ open = false, onOpenChange, maxErrors = 50 } = {}) {
                                 title: "Dismiss",
                                 onClick: (e) => {
                                   e.stopPropagation();
-                                  const idx = errorBus.getEntries().indexOf(entry);
-                                  if (idx !== -1) errorBus.getEntries().splice(idx, 1);
+                                  errorBus.remove(entry.id);
+                                  if (typeof forceUpdate === "function") forceUpdate();
                                 },
                               },
                               children: ["x"],
@@ -365,5 +418,6 @@ export function DevTools({ open = false, onOpenChange, maxErrors = 50 } = {}) {
           key: "devtools-panel",
         }
       : null,
-  ];
+    ];
+  };
 }

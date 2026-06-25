@@ -176,6 +176,8 @@ const {
   createRouter,
   createTheme,
   DataTable,
+  DevTools,
+  errorBus,
   filterOptions,
   Input,
   ListView,
@@ -496,5 +498,42 @@ notifyRouter.navigate("/");
 assert(routerNotifies === 0, "router notified subscribers on unchanged path");
 notifyRouter.navigate("/elsewhere");
 assert(routerNotifies === 1, "router failed to notify on a real path change");
+
+errorBus.clear();
+errorBus.capture(new Error("devtools boom"), { source: "event" });
+let devOpen = false;
+const devRoot = new ElementNode("root");
+mount(
+  () => DevTools({ open: devOpen, onOpenChange: (v) => { devOpen = v; } }),
+  devRoot,
+);
+assert(
+  devRoot.childNodes[0].childNodes[1].textContent === "1",
+  "devtools badge did not show the captured error count",
+);
+assert(
+  !devRoot.textContent.includes("caught"),
+  "devtools panel should start closed",
+);
+devRoot.childNodes[0].click();
+assert(devOpen === true, "devtools button did not toggle open state");
+assert(
+  devRoot.textContent.includes("1 caught"),
+  "devtools panel did not open after clicking the button",
+);
+errorBus.capture(new Error("second boom"), { source: "state" });
+await Promise.resolve();
+await Promise.resolve();
+assert(
+  devRoot.childNodes[0].childNodes[1].textContent === "2",
+  "devtools did not live-update when a new error was captured",
+);
+errorBus.clear();
+await Promise.resolve();
+await Promise.resolve();
+assert(
+  devRoot.childNodes[0].childNodes[1].textContent === "0",
+  "devtools did not refresh after errorBus.clear()",
+);
 
 console.log("smoke ok");
